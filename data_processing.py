@@ -46,9 +46,9 @@ def build_feature_csv(images_path, output_file, boxes=None, class_info=None):
     df["PatientAge"] = df["PatientAge"].apply(
         lambda x: x if x < 120 else np.nan
     )
-    if boxes:
+    if boxes is not None:
         df = df.join(boxes, on="patientId", how="left")
-    if class_info:
+    if class_info is not None:
         df = df.join(class_info, on="patientId", how="left")
 
 
