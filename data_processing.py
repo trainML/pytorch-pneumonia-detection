@@ -9,13 +9,15 @@ def get_boxes_per_patient(df, pId):
     Given the dataset and one patient ID,
     return an array of all the bounding boxes and their labels associated with that patient ID.
     Example of return:
-    array([[x1, y1, width1, height1, class1, target1],
-           [x2, y2, width2, height2, class2, target2]])
+    array([[x1, y1, width1, height1],
+           [x2, y2, width2, height2]])
     """
 
-    boxes = df.loc[df["patientId"] == pId][
-        ["x", "y", "width", "height", "class", "Target"]
-    ].values
+    boxes = (
+        df.loc[df["patientId"] == pId][["x", "y", "width", "height"]]
+        .astype("int")
+        .values.tolist()
+    )
     return boxes
 
 
