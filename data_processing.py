@@ -55,6 +55,7 @@ def build_feature_csv(images_path, output_file, boxes=None, class_info=None):
         join_class_info = class_info.set_index("patientId")
         df = df.join(join_class_info, on="patientId", how="left")
     df.reset_index(inplace=True)
+    df.to_csv(output_file, index=False)
 
 
 def build_training_csv(images_path, labels_path, output_path):
