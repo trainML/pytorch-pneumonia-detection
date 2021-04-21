@@ -46,10 +46,15 @@ def build_feature_csv(images_path, output_file, boxes=None, class_info=None):
     df["PatientAge"] = df["PatientAge"].apply(
         lambda x: x if x < 120 else np.nan
     )
+    df.set_index("patientId", inplace=True)
     if boxes is not None:
-        df = df.join(boxes, on="patientId", how="left")
+        join_boxes = boxes.set_index("patientId")
+        df = df.join(join_boxes, on="patientId", how="left")
+
     if class_info is not None:
-        df = df.join(class_info, on="patientId", how="left")
+        join_class_info = class_info.set_index("patientId")
+        df = df.join(join_class_info, on="patientId", how="left")
+    df.reset_index(inplace=True)
 
 
 def build_training_csv(images_path, labels_path, output_path):
