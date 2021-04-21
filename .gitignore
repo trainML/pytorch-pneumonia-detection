@@ -1,0 +1,17 @@
+build/
+dist/
+*.egg-info/
+*.pyc
+vmlinu*
+config-*
+*.img
+.vagrant
+*.xz
+*.tar
+*.zip
+*.gz
+*.bz2
+.prettierrc
+.coverage
+.pytest*
+**/__pycache__/

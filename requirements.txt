@@ -1,0 +1,9 @@
+torch>=1.8.1
+torchvision
+matplotlib
+pydicom
+numpy
+Pillow
+scikit-learn
+tqdm
+pandas
