@@ -24,7 +24,7 @@ trainML Tutorials - PyTorch Pneumonia Detection Pipeline
 =====
 Before beginning this tutorial, ensure you have created an account on the [trainML platform](https://app.trainml.ai) and you have [Docker](https://docs.docker.com/get-docker/) installed.
 
-This tutorial code originated from a [Kaggle notebook](https://www.kaggle.com/giuliasavorgnan/0-123-lb-pytorch-unet-run-on-google-cloud) by Guilia Savorgnan.
+This tutorial code originated from [Kaggle notebooks](https://www.kaggle.com/giuliasavorgnan/0-123-lb-pytorch-unet-run-on-google-cloud) by Guilia Savorgnan.
 
 ## Instructions
 
