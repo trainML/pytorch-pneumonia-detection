@@ -1,3 +1,8 @@
+import os
+import pandas as pd
+import pydicom
+
+
 def get_boxes_per_patient(df, pId):
     """
     Given the dataset and one patient ID,
