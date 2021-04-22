@@ -85,6 +85,19 @@ def make_parser():
         default=os.environ.get("TRAINML_OUTPUT_PATH"),
         help="save model checkpoints in the specified directory",
     )
+    parser.add_argument(
+        "--train-threshold",
+        dest="train_threshold",
+        action="store_true",
+        help="perform grid search for box threshold",
+    )
+    parser.add_argument(
+        "--train-threshold",
+        dest="train_threshold",
+        action="store_false",
+        default=False,
+        help="do not perform grid search for box threshold",
+    )
 
     # Hyperparameters
     parser.add_argument(
@@ -139,9 +152,16 @@ def make_parser():
     parser.add_argument(
         "--alpha-leaky",
         "--al",
-        type=int,
+        type=float,
         default=0.03,
         help="alpha for LeakyReLU",
+    )
+    parser.add_argument(
+        "--box-threshold",
+        "--bt",
+        type=float,
+        default=0.2,
+        help="threshold for boxes",
     )
 
     return parser
@@ -676,18 +696,25 @@ def train(args):
     )
     predictions_valid = predict(best_model, loader_valid)
 
-    (
-        best_threshold,
-        best_avg_precision_valid,
-        thresholds,
-        avg_precision_valids,
-    ) = train_threshold(
-        dataset_valid, predictions_valid, pId_boxes_dict, args.rescale_factor
-    )
-    print(best_threshold)
-    print(best_avg_precision_valid)
-    print(thresholds)
-    print(avg_precision_valids)
+    if args.train_threshold:
+        (
+            best_threshold,
+            best_avg_precision_valid,
+            thresholds,
+            avg_precision_valids,
+        ) = train_threshold(
+            dataset_valid,
+            predictions_valid,
+            pId_boxes_dict,
+            args.rescale_factor,
+        )
+        print(best_threshold)
+        print(best_avg_precision_valid)
+        print(thresholds)
+        print(avg_precision_valids)
+    else:
+        best_threshold = args.box_threshold
+
     evaluate_threshold(
         dataset_valid,
         predictions_valid,
