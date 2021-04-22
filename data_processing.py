@@ -90,7 +90,7 @@ def make_parser():
         "--labels",
         "-l",
         type=str,
-        default=f"{os.environ.get('TRAINML_MODEL_PATH')}",
+        default=f"{os.environ.get('TRAINML_DATA_PATH')}",
         help="path to labels file for training",
     )
     parser.add_argument(
