@@ -534,6 +534,7 @@ def evaluate_threshold(
     pId_boxes_dict,
     rescale_factor,
 ):
+    img_precisions = []
     for i in range(len(dataset_valid)):
         img, pId = dataset_valid[i]
         target_boxes = (
@@ -551,6 +552,7 @@ def evaluate_threshold(
         avg_precision_img = average_precision_image(
             predicted_boxes, confidences, target_boxes, shape=img[0].shape[0]
         )
+        img_precisions.append(avg_precision_img)
         if i % 100 == 0:  # print every 100
             # plt.imshow(
             #     img[0], cmap=mpl.cm.gist_gray
@@ -572,6 +574,7 @@ def evaluate_threshold(
                 "Average precision image: {:05.5f}".format(avg_precision_img)
             )
             # plt.show()
+    return img_precisions
 
 
 def train(args):
@@ -715,12 +718,16 @@ def train(args):
     else:
         best_threshold = args.box_threshold
 
-    evaluate_threshold(
+    img_precisions = evaluate_threshold(
         dataset_valid,
         predictions_valid,
         best_threshold,
         pId_boxes_dict,
         args.rescale_factor,
+    )
+
+    print(
+        f"Total Average Precision: {sum(img_precisions) / len(img_precisions)}"
     )
 
     save_checkpoint(
