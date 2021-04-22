@@ -9,9 +9,16 @@ import torchvision as tv
 from torch.utils.data import DataLoader
 
 
-from metrics import RunningAverage, average_precision_batch
+from metrics import (
+    RunningAverage,
+    average_precision_batch,
+    average_precision_image,
+    parse_boxes,
+    prediction_string,
+)
 from model import save_checkpoint, PneumoniaUNET, BCEWithLogitsLoss2d
 from dataset import PneumoniaDataset, get_boxes_per_patient
+from predict import rescale_box_coordinates, predict
 
 
 def make_parser():
@@ -100,6 +107,7 @@ def make_parser():
         type=str,
         default="adam",
         choices=["adam", "adamw", "adamax", "sgd", "adagrad"],
+        help='optimizer type to use: "adam", "adamw", "adamax", "sgd", or "adagrad"',
     )
     parser.add_argument(
         "--momentum",
@@ -139,7 +147,7 @@ def make_parser():
     return parser
 
 
-def train_one(
+def train_model(
     model,
     dataloader,
     optimizer,
@@ -222,7 +230,7 @@ def train_one(
     return loss_avg_t_hist_ep, loss_t_hist_ep, prec_t_hist_ep
 
 
-def evaluate(
+def evaluate_model(
     model,
     dataloader,
     loss_fn,
@@ -326,10 +334,38 @@ def train_and_evaluate(
         start = time.time()
 
         # define the optimizer
-        lr = lr_init * 0.5 ** float(
-            epoch
-        )  # reduce the learning rate at each epoch
-        optimizer = torch.optim.Adam(model.parameters(), lr=lr, eps=eps)
+        if optimizer_type == "adagrad":
+            optimizer = torch.optim.Adagrad(
+                model.parameters(), lr=lr, lr_decay=lr_decay, weight_decay=wd
+            )
+        else:
+            lr = lr_init * 0.5 ** float(
+                epoch
+            )  # reduce the learning rate at each epoch
+            if optimizer_type == "adam":
+                optimizer = torch.optim.Adam(
+                    model.parameters(), lr=lr, eps=eps, weight_decay=wd
+                )
+            if optimizer_type == "adamw":
+                optimizer = torch.optim.AdamW(
+                    model.parameters(), lr=lr, eps=eps, weight_decay=wd
+                )
+            if optimizer_type == "adamax":
+                optimizer = torch.optim.Adamax(
+                    model.parameters(), lr=lr, eps=eps, weight_decay=wd
+                )
+            if optimizer_type == "sgd":
+                optimizer = torch.optim.SGD(
+                    model.parameters(),
+                    lr=lr,
+                    momentum=momentum,
+                    weight_decay=wd,
+                )
+            else:
+                raise ValueError(
+                    'Invalid optimizer_type, allowed values are "adam", "adamw", "adamax", "sgd", "adagrad"'
+                )
+
         # Run one epoch
         print(
             "Epoch {}/{}. Learning rate = {:05.3f}.".format(
@@ -338,7 +374,7 @@ def train_and_evaluate(
         )
 
         # train model for a whole epoc (one full pass over the training set)
-        loss_avg_t_hist_ep, loss_t_hist_ep, prec_t_hist_ep = train_one(
+        loss_avg_t_hist_ep, loss_t_hist_ep, prec_t_hist_ep = train_model(
             model,
             train_dataloader,
             optimizer,
@@ -353,7 +389,7 @@ def train_and_evaluate(
         prec_t_history += prec_t_hist_ep
 
         # Evaluate for one epoch on validation set
-        val_metrics = evaluate(
+        val_metrics = evaluate_model(
             model,
             val_dataloader,
             loss_fn,
@@ -420,6 +456,102 @@ def train_and_evaluate(
     }
 
     return histories, best_models
+
+
+def train_threshold(
+    dataset_valid, predictions_valid, pId_boxes_dict, rescale_factor
+):
+    best_threshold = None
+    best_avg_precision_valid = 0.0
+    thresholds = np.arange(0.01, 0.60, 0.01)
+    avg_precision_valids = []
+    for threshold in thresholds:
+        precision_valid = []
+        for i in range(len(dataset_valid)):
+            img, pId = dataset_valid[i]
+            target_boxes = (
+                [
+                    rescale_box_coordinates(box, rescale_factor)
+                    for box in pId_boxes_dict[pId]
+                ]
+                if pId in pId_boxes_dict
+                else []
+            )
+            prediction = predictions_valid[pId]
+            predicted_boxes, confidences = parse_boxes(
+                prediction, threshold=threshold, connectivity=None
+            )
+            avg_precision_img = average_precision_image(
+                predicted_boxes,
+                confidences,
+                target_boxes,
+                shape=img[0].shape[0],
+            )
+            precision_valid.append(avg_precision_img)
+        avg_precision_valid = np.nanmean(precision_valid)
+        avg_precision_valids.append(avg_precision_valid)
+        print(
+            "Threshold: {}, average precision validation: {:03.5f}".format(
+                threshold, avg_precision_valid
+            )
+        )
+        if avg_precision_valid > best_avg_precision_valid:
+            print("Found new best average precision validation!")
+            best_avg_precision_valid = avg_precision_valid
+            best_threshold = threshold
+    return (
+        best_threshold,
+        best_avg_precision_valid,
+        thresholds,
+        avg_precision_valids,
+    )
+
+
+def evaluate_threshold(
+    dataset_valid,
+    predictions_valid,
+    best_threshold,
+    pId_boxes_dict,
+    rescale_factor,
+):
+    for i in range(len(dataset_valid)):
+        img, pId = dataset_valid[i]
+        target_boxes = (
+            [
+                rescale_box_coordinates(box, rescale_factor)
+                for box in pId_boxes_dict[pId]
+            ]
+            if pId in pId_boxes_dict
+            else []
+        )
+        prediction = predictions_valid[pId]
+        predicted_boxes, confidences = parse_boxes(
+            prediction, threshold=best_threshold, connectivity=None
+        )
+        avg_precision_img = average_precision_image(
+            predicted_boxes, confidences, target_boxes, shape=img[0].shape[0]
+        )
+        if i % 100 == 0:  # print every 100
+            # plt.imshow(
+            #     img[0], cmap=mpl.cm.gist_gray
+            # )  # [0] is the channel index (here there's just one channel)
+            # plt.imshow(prediction[0], cmap=mpl.cm.jet, alpha=0.5)
+            # draw_boxes(predicted_boxes, confidences, target_boxes, plt.gca())
+            print(
+                "Prediction mask scale:",
+                prediction[0].min(),
+                "-",
+                prediction[0].max(),
+            )
+            print(
+                "Prediction string:",
+                prediction_string(predicted_boxes, confidences),
+            )
+            print("Ground truth boxes:", target_boxes)
+            print(
+                "Average precision image: {:05.5f}".format(avg_precision_img)
+            )
+            # plt.show()
 
 
 def train(args):
@@ -528,8 +660,50 @@ def train(args):
         save_path=args.save,
         restore_file=args.checkpoint,
     )
-    print(histories)
-    print(best_models)
+    best_model = best_models["best precision model"]
+
+    dataset_valid = PneumoniaDataset(
+        root=args.data,
+        pIds=pIds_valid,
+        predict=True,
+        boxes=None,
+        rescale_factor=args.rescale_factor,
+        transform=transform,
+        seed=args.seed,
+    )
+    loader_valid = DataLoader(
+        dataset=dataset_valid, batch_size=args.batch_size, shuffle=False
+    )
+    predictions_valid = predict(best_model, loader_valid)
+
+    (
+        best_threshold,
+        best_avg_precision_valid,
+        thresholds,
+        avg_precision_valids,
+    ) = train_threshold(
+        dataset_valid, predictions_valid, pId_boxes_dict, args.rescale_factor
+    )
+    print(best_threshold)
+    print(best_avg_precision_valid)
+    print(thresholds)
+    print(avg_precision_valids)
+    evaluate_threshold(
+        dataset_valid,
+        predictions_valid,
+        best_threshold,
+        pId_boxes_dict,
+        args.rescale_factor,
+    )
+
+    save_checkpoint(
+        {
+            "best_threshold": best_threshold,
+            "state_dict": best_model.state_dict(),
+        },
+        args.save,
+        is_final=True,
+    )
 
 
 if __name__ == "__main__":

@@ -374,15 +374,22 @@ class BCEWithLogitsLoss2d(nn.Module):
         return self.loss(scores_flat, targets_flat)
 
 
-def save_checkpoint(state, file_path, is_best=False, metric=None):
+def save_checkpoint(
+    state, file_path, is_best=False, metric=None, is_final=False
+):
     """Saves model and training parameters at 'last.pth.tar'. If is_best==True, also saves
-    'best.pth.tar'
+    'best.pth.tar'. If is_final==True, saves as 'best.pth.tar'
     Args:
         state: (dict) contains model's state_dict, may contain other keys such as epoch, optimizer state_dict
         is_best: (bool) True if it is the best model seen till now
+        is_final: (bool) True if it is the final model save
     """
-    torch.save(state, f"{file_path}/last.pth.tar")
-    if is_best:
-        shutil.copyfile(
-            f"{file_path}/last.pth.tar", f"{file_path}/{metric}.best.pth.tar"
-        )
+    if is_final:
+        torch.save(state, f"{file_path}/final.pth.tar")
+    else:
+        torch.save(state, f"{file_path}/last.pth.tar")
+        if is_best:
+            shutil.copyfile(
+                f"{file_path}/last.pth.tar",
+                f"{file_path}/{metric}.best.pth.tar",
+            )
