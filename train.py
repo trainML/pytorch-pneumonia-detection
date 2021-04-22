@@ -295,7 +295,7 @@ def train_and_evaluate(
     pId_boxes_dict,
     rescale_factor,
     shape,
-    save_file=None,
+    save_path=None,
     restore_file=None,
 ):
 
@@ -375,14 +375,14 @@ def train_and_evaluate(
             best_prec_model = model
 
         # Save best weights based on best_val_loss and best_val_prec
-        if save_checkpoint:
+        if save_path:
             save_checkpoint(
                 {
                     "epoch": epoch + 1,
                     "state_dict": model.state_dict(),
                     "optim_dict": optimizer.state_dict(),
                 },
-                save_file,
+                save_path,
                 is_best=is_best_loss,
                 metric="loss",
             )
@@ -392,7 +392,7 @@ def train_and_evaluate(
                     "state_dict": model.state_dict(),
                     "optim_dict": optimizer.state_dict(),
                 },
-                save_file,
+                save_path,
                 is_best=is_best_prec,
                 metric="prec",
             )
@@ -505,7 +505,7 @@ def train(args):
         model,
         loader_train,
         loader_valid,
-        args.lr,
+        args.learning_rate,
         args.optimizer,
         args.learning_rate_decay,
         args.momentum,
@@ -518,7 +518,7 @@ def train(args):
         pId_boxes_dict,
         args.rescale_factor,
         shape,
-        save_file=args.save,
+        save_path=args.save,
         restore_file=args.checkpoint,
     )
     print(histories)
