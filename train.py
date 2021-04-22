@@ -697,7 +697,7 @@ def train(args):
 
     dataset_valid = PneumoniaDataset(
         root=args.data,
-        pIds=pIds_valid,
+        pIds=pIds_valid[:100] if args.debug else pIds_valid,
         predict=True,
         boxes=None,
         rescale_factor=args.rescale_factor,
