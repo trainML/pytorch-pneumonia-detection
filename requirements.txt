@@ -5,5 +5,7 @@ pydicom
 numpy
 Pillow
 scikit-learn
+scikit-image
 tqdm
 pandas
+scipy
