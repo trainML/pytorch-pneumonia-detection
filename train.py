@@ -568,6 +568,7 @@ def evaluate_threshold(
             # )  # [0] is the channel index (here there's just one channel)
             # plt.imshow(prediction[0], cmap=mpl.cm.jet, alpha=0.5)
             # draw_boxes(predicted_boxes, confidences, target_boxes, plt.gca())
+            print("Prediction:", prediction)
             print(
                 "Prediction mask scale:",
                 prediction[0].min(),
