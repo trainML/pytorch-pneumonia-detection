@@ -728,6 +728,9 @@ def train(args):
     else:
         best_threshold = args.box_threshold
 
+    if args.save:
+        os.makedirs(f"{args.save}/images", exist_ok=True)
+
     img_precisions = evaluate_threshold(
         dataset_valid,
         predictions_valid,
