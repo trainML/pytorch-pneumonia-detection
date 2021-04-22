@@ -2,6 +2,7 @@ import os
 import pandas as pd
 import numpy as np
 import pydicom
+from argparse import ArgumentParser
 
 
 def get_boxes_per_patient(df, pId):
@@ -72,3 +73,48 @@ def build_prediction_csv(images_path, output_path):
         images_path,
         f"{output_path}/predict.csv",
     )
+
+
+def make_parser():
+    parser = ArgumentParser(
+        description="Train UNET segmentation model for Pneumonia detection"
+    )
+    parser.add_argument(
+        "--images",
+        "-i",
+        type=str,
+        default=f"{os.environ.get('TRAINML_DATA_PATH')}/stage_2_train_images",
+        help="path to image files",
+    )
+    parser.add_argument(
+        "--labels",
+        "-l",
+        type=str,
+        default=f"{os.environ.get('TRAINML_MODEL_PATH')}/train.csv",
+        help="path to labels file for training",
+    )
+    parser.add_argument(
+        "--output",
+        "-o",
+        type=str,
+        default=f"{os.environ.get('TRAINML_MODEL_PATH')}",
+        help="output path",
+    )
+    parser.add_argument(
+        "--type",
+        "-t",
+        type=str,
+        default="training",
+        choices=["train", "prediction"],
+    )
+
+
+if __name__ == "__main__":
+    parser = make_parser()
+    args = parser.parse_args()
+    print(args)
+
+    if args.type == "training":
+        build_training_csv(args.images, args.labels, args.output)
+    if args.type == "prediction":
+        build_prediction_csv(args.images, args.output)
