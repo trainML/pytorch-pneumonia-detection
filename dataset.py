@@ -63,7 +63,7 @@ def elastic_transform(image, alpha, sigma, random_state=None):
 
     dx = (
         gaussian_filter(
-            (random_state.random(*shape) * 2 - 1),
+            (random_state.random(size=shape) * 2 - 1),
             sigma,
             mode="constant",
             cval=0,
@@ -72,7 +72,7 @@ def elastic_transform(image, alpha, sigma, random_state=None):
     )
     dy = (
         gaussian_filter(
-            (random_state.random(*shape) * 2 - 1),
+            (random_state.random(size=shape) * 2 - 1),
             sigma,
             mode="constant",
             cval=0,
