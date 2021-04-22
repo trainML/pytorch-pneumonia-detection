@@ -696,7 +696,7 @@ def train(args):
     )
     predictions_valid = predict(best_model, loader_valid)
 
-    if args.train_threshold or args.debug:
+    if args.train_threshold and not args.debug:
         (
             best_threshold,
             best_avg_precision_valid,
