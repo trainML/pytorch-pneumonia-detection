@@ -48,9 +48,16 @@ def make_parser():
     )
     parser.add_argument(
         "--debug",
-        type=bool,
-        default=False,
+        dest="debug",
+        action="store_true",
         help="enable debug mode",
+    )
+    parser.add_argument(
+        "--no-debug",
+        dest="debug",
+        action="store_false",
+        default=False,
+        help="disable debug mode",
     )
     parser.add_argument(
         "--seed",
