@@ -66,6 +66,15 @@ def draw_boxes(predicted_boxes, confidences, target_boxes, ax, angle=0):
     return ax
 
 
+def save_image_prediction(file, img, prediction, predicted_boxes, confidences):
+    plt.imshow(
+        img[0], cmap=mpl.cm.gist_gray
+    )  # [0] is the channel index (here there's just one channel)
+    plt.imshow(prediction[0], cmap=mpl.cm.jet, alpha=0.5)
+    draw_boxes(predicted_boxes, confidences, None, plt.gca())
+    plt.savefig(file)
+
+
 def predict(model, dataloader):
 
     # set model to evaluation mode

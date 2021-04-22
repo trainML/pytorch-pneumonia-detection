@@ -18,7 +18,7 @@ from metrics import (
 )
 from model import save_checkpoint, PneumoniaUNET, BCEWithLogitsLoss2d
 from dataset import PneumoniaDataset, get_boxes_per_patient
-from predict import rescale_box_coordinates, predict
+from predict import rescale_box_coordinates, predict, save_image_prediction
 
 
 def make_parser():
@@ -533,6 +533,7 @@ def evaluate_threshold(
     best_threshold,
     pId_boxes_dict,
     rescale_factor,
+    image_save_path=None,
 ):
     img_precisions = []
     for i in range(len(dataset_valid)):
@@ -553,6 +554,14 @@ def evaluate_threshold(
             predicted_boxes, confidences, target_boxes, shape=img[0].shape[0]
         )
         img_precisions.append(avg_precision_img)
+        if image_save_path:
+            save_image_prediction(
+                f"{image_save_path}/{pId}.png",
+                img,
+                prediction,
+                predicted_boxes,
+                confidences,
+            )
         if i % 100 == 0:  # print every 100
             # plt.imshow(
             #     img[0], cmap=mpl.cm.gist_gray
@@ -724,6 +733,7 @@ def train(args):
         best_threshold,
         pId_boxes_dict,
         args.rescale_factor,
+        image_save_path=f"{args.save}/images" if args.save else None,
     )
 
     print(
