@@ -346,15 +346,15 @@ def train_and_evaluate(
                 optimizer = torch.optim.Adam(
                     model.parameters(), lr=lr, eps=eps, weight_decay=wd
                 )
-            if optimizer_type == "adamw":
+            elif optimizer_type == "adamw":
                 optimizer = torch.optim.AdamW(
                     model.parameters(), lr=lr, eps=eps, weight_decay=wd
                 )
-            if optimizer_type == "adamax":
+            elif optimizer_type == "adamax":
                 optimizer = torch.optim.Adamax(
                     model.parameters(), lr=lr, eps=eps, weight_decay=wd
                 )
-            if optimizer_type == "sgd":
+            elif optimizer_type == "sgd":
                 optimizer = torch.optim.SGD(
                     model.parameters(),
                     lr=lr,
