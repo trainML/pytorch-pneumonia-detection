@@ -71,7 +71,7 @@ def save_image_prediction(file, img, prediction, predicted_boxes, confidences):
         img[0], cmap=mpl.cm.gist_gray
     )  # [0] is the channel index (here there's just one channel)
     plt.imshow(prediction[0], cmap=mpl.cm.jet, alpha=0.5)
-    draw_boxes(predicted_boxes, confidences, None, plt.gca())
+    draw_boxes(predicted_boxes, confidences, [], plt.gca())
     plt.savefig(file)
 
 
