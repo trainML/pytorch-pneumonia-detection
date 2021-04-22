@@ -92,7 +92,7 @@ def make_parser():
         help="perform grid search for box threshold",
     )
     parser.add_argument(
-        "--train-threshold",
+        "--no-train-threshold",
         dest="train_threshold",
         action="store_false",
         default=False,
@@ -696,7 +696,7 @@ def train(args):
     )
     predictions_valid = predict(best_model, loader_valid)
 
-    if args.train_threshold:
+    if args.train_threshold or args.debug:
         (
             best_threshold,
             best_avg_precision_valid,
