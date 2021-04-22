@@ -107,6 +107,7 @@ def make_parser():
         default="training",
         choices=["train", "prediction"],
     )
+    return parser
 
 
 if __name__ == "__main__":
