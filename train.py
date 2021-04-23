@@ -43,14 +43,14 @@ def make_parser():
         "--epochs",
         "-e",
         type=int,
-        default=20,
+        default=2,
         help="number of epochs for training",
     )
     parser.add_argument(
         "--batch-size",
         "--bs",
         type=int,
-        default=6,
+        default=10,
         help="number of examples for each iteration",
     )
     parser.add_argument(
@@ -356,7 +356,10 @@ def train_and_evaluate(
         # define the optimizer
         if optimizer_type == "adagrad":
             optimizer = torch.optim.Adagrad(
-                model.parameters(), lr=lr, lr_decay=lr_decay, weight_decay=wd
+                model.parameters(),
+                lr=lr_init,
+                lr_decay=lr_decay,
+                weight_decay=wd,
             )
         else:
             lr = lr_init * 0.5 ** float(
@@ -536,6 +539,7 @@ def evaluate_threshold(
     image_save_path=None,
 ):
     img_precisions = []
+    print(len(dataset_valid))
     for i in range(len(dataset_valid)):
         img, pId = dataset_valid[i]
         target_boxes = (
