@@ -99,13 +99,6 @@ def make_parser():
         default=False,
         help="do not perform grid search for box threshold",
     )
-    parser.add_argument(
-        "--no-debug",
-        dest="debug",
-        action="store_false",
-        default=False,
-        help="disable debug mode",
-    )
 
     # Hyperparameters
     parser.add_argument(
