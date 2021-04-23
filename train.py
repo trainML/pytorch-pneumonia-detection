@@ -7,6 +7,7 @@ from argparse import ArgumentParser
 from torch.autograd import Variable
 import torchvision as tv
 from torch.utils.data import DataLoader
+from torch.utils.tensorboard import SummaryWriter
 
 
 from metrics import (
@@ -98,6 +99,13 @@ def make_parser():
         default=False,
         help="do not perform grid search for box threshold",
     )
+    parser.add_argument(
+        "--no-debug",
+        dest="debug",
+        action="store_false",
+        default=False,
+        help="disable debug mode",
+    )
 
     # Hyperparameters
     parser.add_argument(
@@ -176,6 +184,7 @@ def train_model(
     pId_boxes_dict,
     rescale_factor,
     shape,
+    writer,
     save_summary_steps=5,
 ):
     # set model to train model
@@ -202,6 +211,7 @@ def train_model(
 
         # compute loss
         loss = loss_fn(output_batch, labels_batch)
+        writer.add_scalar("Loss/train", loss, i)
 
         # compute gradient and do optimizer step
         loss.backward()
@@ -221,6 +231,7 @@ def train_model(
                 output_batch, pIds_batch, pId_boxes_dict, rescale_factor, shape
             )
             prec_t_hist_ep.append(prec_batch)
+            writer.add_scalar("Precision/train", prec_batch, i)
             # log results
             summary_batch_string = "batch loss = {:05.7f} ;  ".format(
                 loss.item()
@@ -258,6 +269,7 @@ def evaluate_model(
     pId_boxes_dict,
     rescale_factor,
     shape,
+    writer,
 ):
 
     # set model to evaluation mode
@@ -280,6 +292,7 @@ def evaluate_model(
         output_batch = model(input_batch)
         # compute loss of batch
         loss = loss_fn(output_batch, labels_batch)
+        writer.add_scalar("Loss/validate", loss, i)
         losses.append(loss.item())
 
         # extract data from torch Variable, move to cpu
@@ -293,6 +306,7 @@ def evaluate_model(
             shape,
             return_array=True,
         )
+        writer.add_scalar("Precision/validate", prec_batch, i)
         for p in prec_batch:
             precisions.append(p)
         print("--- Validation batch {} / {}: ".format(i, num_steps))
@@ -338,6 +352,8 @@ def train_and_evaluate(
     if restore_file is not None:
         checkpoint = torch.load(restore_file)
         model.load_state_dict(checkpoint["state_dict"])
+
+    writer = SummaryWriter(f"{os.environ.get('TRAINML_OUTPUT_PATH')}/logs")
 
     best_val_loss = 1e15
     best_val_prec = 0.0
@@ -407,6 +423,7 @@ def train_and_evaluate(
             pId_boxes_dict,
             rescale_factor,
             shape,
+            writer,
         )
         loss_avg_t_history += loss_avg_t_hist_ep
         loss_t_history += loss_t_hist_ep
@@ -421,6 +438,7 @@ def train_and_evaluate(
             pId_boxes_dict,
             rescale_factor,
             shape,
+            writer,
         )
 
         val_loss = val_metrics["loss"]
