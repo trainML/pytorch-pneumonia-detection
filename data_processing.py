@@ -77,7 +77,7 @@ def build_prediction_csv(images_path, output_path):
 
 def make_parser():
     parser = ArgumentParser(
-        description="Train UNET segmentation model for Pneumonia detection"
+        description="Preprocess images and features for Pneumonia detection"
     )
     parser.add_argument(
         "--images",

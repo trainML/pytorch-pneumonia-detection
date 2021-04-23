@@ -355,9 +355,10 @@ def train_and_evaluate(
 
         # define the optimizer
         if optimizer_type == "adagrad":
+            lr = lr_init
             optimizer = torch.optim.Adagrad(
                 model.parameters(),
-                lr=lr_init,
+                lr=lr,
                 lr_decay=lr_decay,
                 weight_decay=wd,
             )
