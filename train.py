@@ -593,7 +593,6 @@ def evaluate_threshold(
 
 
 def train(args):
-    min_box_area = 10000
     original_image_shape = 1024
     validation_frac = 0.10
 

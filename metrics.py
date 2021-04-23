@@ -23,7 +23,7 @@ def parse_boxes(
     threshold=0.20,
     connectivity=None,
     min_box_area=10000,
-    rescale_factor=1,
+    rescale_factor=4,
 ):
     """
     :param msk: (torch.Tensor) CxWxH tensor representing the prediction mask
