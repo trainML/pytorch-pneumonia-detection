@@ -204,7 +204,7 @@ def train_model(
 
         # compute loss
         loss = loss_fn(output_batch, labels_batch)
-        writer.add_scalar("Loss/train", loss, i)
+        writer.add_scalar("Loss/train", loss.item(), i)
 
         # compute gradient and do optimizer step
         loss.backward()
@@ -285,7 +285,7 @@ def evaluate_model(
         output_batch = model(input_batch)
         # compute loss of batch
         loss = loss_fn(output_batch, labels_batch)
-        writer.add_scalar("Loss/validate", loss, i)
+        writer.add_scalar("Loss/validate", loss.item(), i)
         losses.append(loss.item())
 
         # extract data from torch Variable, move to cpu
