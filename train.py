@@ -299,7 +299,7 @@ def evaluate_model(
             shape,
             return_array=True,
         )
-        writer.add_scalar("Precision/validate", prec_batch, i)
+        writer.add_scalar("Precision/validate", np.nanmean(prec_batch), i)
         for p in prec_batch:
             precisions.append(p)
         print("--- Validation batch {} / {}: ".format(i, num_steps))
