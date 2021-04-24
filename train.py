@@ -4,10 +4,10 @@ import pandas as pd
 import torch
 import os
 from argparse import ArgumentParser
+from torch.utils.tensorboard import SummaryWriter
 from torch.autograd import Variable
 import torchvision as tv
 from torch.utils.data import DataLoader
-from torch.utils.tensorboard import SummaryWriter
 
 
 from metrics import (
