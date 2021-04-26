@@ -141,13 +141,13 @@ class PneumoniaDataset(torchDataset):
         img = pydicom.dcmread(
             os.path.join(self.data_path, pId + ".dcm")
         ).pixel_array
-        summary = dict(
-            row_range=np.ptp(np.ptp(img, axis=0)),
-            column_range=np.ptp(np.ptp(img, axis=1)),
-            mean=np.mean(img),
-            shape=img.shape,
-        )
-        print("original image", summary)
+        # summary = dict(
+        #     row_range=np.ptp(np.ptp(img, axis=0)),
+        #     column_range=np.ptp(np.ptp(img, axis=1)),
+        #     mean=np.mean(img),
+        #     shape=img.shape,
+        # )
+        # print("original image", summary)
         # check if image is square
         if img.shape[0] != img.shape[1]:
             raise RuntimeError(
@@ -193,20 +193,20 @@ class PneumoniaDataset(torchDataset):
         if self.transform is not None:
             img = self.transform(img)
 
-        summary = dict(
-            row_range=np.ptp(np.ptp(img.numpy(), axis=0)),
-            column_range=np.ptp(np.ptp(img.numpy(), axis=1)),
-            mean=np.mean(img.numpy()),
-            shape=img.numpy().shape,
-        )
-        print("modified image", summary)
+        # summary = dict(
+        #     row_range=np.ptp(np.ptp(img.numpy(), axis=0)),
+        #     column_range=np.ptp(np.ptp(img.numpy(), axis=1)),
+        #     mean=np.mean(img.numpy()),
+        #     shape=img.numpy().shape,
+        # )
+        # print("modified image", summary)
         if not self.predict:
             # create target mask
             target = np.zeros((image_shape, image_shape))
             # if patient ID has associated target boxes (=if image contains pneumonia)
             if pId in self.boxes:
                 # loop through boxes
-                print("boxes:", pId, self.boxes[pId])
+                # print("boxes:", pId, self.boxes[pId])
                 for box in self.boxes[pId]:
                     # extract box coordinates
                     x, y, w, h = box
@@ -223,13 +223,13 @@ class PneumoniaDataset(torchDataset):
             # add trailing channel dimension
             target = np.expand_dims(target, -1)
             target = target.astype("uint8")
-            summary = dict(
-                row_range=np.ptp(np.ptp(target, axis=0)),
-                column_range=np.ptp(np.ptp(target, axis=1)),
-                mean=np.mean(target),
-                shape=target.shape,
-            )
-            print("target:", pId, summary)
+            # summary = dict(
+            #     row_range=np.ptp(np.ptp(target, axis=0)),
+            #     column_range=np.ptp(np.ptp(target, axis=1)),
+            #     mean=np.mean(target),
+            #     shape=target.shape,
+            # )
+            # print("target:", pId, summary)
             # apply rotation augmentation
             if self.rotation_angle > 0:
                 target = tv.transforms.functional.to_pil_image(target)
@@ -239,13 +239,13 @@ class PneumoniaDataset(torchDataset):
             # apply transforms to target
             if self.transform is not None:
                 target = self.transform(target)
-            summary = dict(
-                row_range=np.ptp(np.ptp(target.numpy(), axis=0)),
-                column_range=np.ptp(np.ptp(target.numpy(), axis=1)),
-                mean=np.mean(target.numpy()),
-                shape=target.numpy().shape,
-            )
-            print("target transformed:", pId, summary)
+            # summary = dict(
+            #     row_range=np.ptp(np.ptp(target.numpy(), axis=0)),
+            #     column_range=np.ptp(np.ptp(target.numpy(), axis=1)),
+            #     mean=np.mean(target.numpy()),
+            #     shape=target.numpy().shape,
+            # )
+            # print("target transformed:", pId, summary)
             return img, target, pId
         else:
             return img, pId

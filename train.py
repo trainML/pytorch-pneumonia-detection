@@ -128,13 +128,25 @@ def make_parser():
         "-m",
         type=float,
         default=0.9,
-        help="momentum argument for Batch Norm Layer and SGD optimizer",
+        help="momentum argument for SGD optimizer",
+    )
+    parser.add_argument(
+        "--bn-momentum",
+        type=float,
+        default=0.9,
+        help="momentum argument for Batch Norm Layer ",
     )
     parser.add_argument(
         "--eps",
         type=float,
+        default=1e-08,
+        help="eps argument for Adam optimizer",
+    )
+    parser.add_argument(
+        "--bn-eps",
+        type=float,
         default=1e-05,
-        help="eps argument for Batch Norm Layer and Adam optimizer",
+        help="eps argument for Batch Norm Layer",
     )
     parser.add_argument(
         "--weight-decay",
@@ -205,14 +217,14 @@ def train_model(
         # compute loss
         loss = loss_fn(output_batch, labels_batch)
         writer.add_scalar("Loss/train", loss.item(), i)
-        print(loss)
+        # print(loss)
 
         # compute gradient and do optimizer step
         loss.backward()
         optimizer.step()
 
-        print(loss)
-        print(optimizer)
+        # print(loss)
+        # print(optimizer)
 
         # update loss running average
         loss_avg.update(loss.item())
@@ -703,8 +715,8 @@ def train(args):
 
     # define an instance of the model
     model = PneumoniaUNET(
-        bn_momentum=args.momentum,
-        eps=args.eps,
+        bn_momentum=args.bn_momentum,
+        eps=args.bn_eps,
         alpha_leaky=args.alpha_leaky,
     ).cuda()
 
