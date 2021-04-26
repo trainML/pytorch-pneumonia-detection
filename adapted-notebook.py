@@ -273,7 +273,13 @@ class PneumoniaDataset(torchDataset):
             # add trailing channel dimension
             target = np.expand_dims(target, -1)
             target = target.astype("uint8")
-            print("target:", pId, target)
+            summary = dict(
+                row_range=np.ptp(target, axis=0),
+                column_range=np.ptp(target, axis=1),
+                row_mean=np.mean(target, axis=0),
+                column_mean=np.mean(target, axis=0),
+            )
+            print("target:", pId, summary)
             # apply rotation augmentation
             if self.rotation_angle > 0:
                 target = tv.transforms.functional.to_pil_image(target)
@@ -283,7 +289,13 @@ class PneumoniaDataset(torchDataset):
             # apply transforms to target
             if self.transform is not None:
                 target = self.transform(target)
-            print(pId, target)
+            summary = dict(
+                row_range=np.ptp(target, axis=0),
+                column_range=np.ptp(target, axis=1),
+                row_mean=np.mean(target, axis=0),
+                column_mean=np.mean(target, axis=0),
+            )
+            print("target transformed:", pId, summary)
             return img, target, pId
         else:
             return img, pId
