@@ -209,6 +209,13 @@ class PneumoniaDataset(torchDataset):
         img = pydicom.dcmread(
             os.path.join(self.data_path, pId + ".dcm")
         ).pixel_array
+        summary = dict(
+            row_range=np.ptp(np.ptp(img, axis=0)),
+            column_range=np.ptp(np.ptp(img, axis=1)),
+            mean=np.mean(img),
+            shape=img.shape,
+        )
+        print("original image", summary)
         # check if image is square
         if img.shape[0] != img.shape[1]:
             raise RuntimeError(
@@ -249,6 +256,13 @@ class PneumoniaDataset(torchDataset):
         if self.transform is not None:
             img = self.transform(img)
 
+        summary = dict(
+            row_range=np.ptp(np.ptp(img, axis=0)),
+            column_range=np.ptp(np.ptp(img, axis=1)),
+            mean=np.mean(img),
+            shape=img.shape,
+        )
+        print("modified image", summary)
         if not self.predict:
             # create target mask
             target = np.zeros((image_shape, image_shape))
@@ -277,6 +291,7 @@ class PneumoniaDataset(torchDataset):
                 row_range=np.ptp(np.ptp(target, axis=0)),
                 column_range=np.ptp(np.ptp(target, axis=1)),
                 mean=np.mean(target),
+                shape=target.shape,
             )
             print("target:", pId, summary)
             # apply rotation augmentation
@@ -292,6 +307,7 @@ class PneumoniaDataset(torchDataset):
                 row_range=np.ptp(np.ptp(target.numpy(), axis=0)),
                 column_range=np.ptp(np.ptp(target.numpy(), axis=1)),
                 mean=np.mean(target.numpy()),
+                shape=target.numpy().shape,
             )
             print("target transformed:", pId, summary)
             return img, target, pId
@@ -1013,10 +1029,14 @@ def train(
 
         # compute loss
         loss = loss_fn(output_batch, labels_batch)
+        print(loss)
 
         # compute gradient and do optimizer step
         loss.backward()
         optimizer.step()
+
+        print(loss)
+        print(optimizer)
 
         # update loss running average
         loss_avg.update(loss.item())
@@ -1265,7 +1285,7 @@ def train_and_evaluate(
 #
 
 # train and evaluate the model
-debug = True
+debug = False
 
 # define an instance of the model
 model = PneumoniaUNET().cuda() if gpu_available else PneumoniaUNET()

@@ -205,10 +205,14 @@ def train_model(
         # compute loss
         loss = loss_fn(output_batch, labels_batch)
         writer.add_scalar("Loss/train", loss.item(), i)
+        print(loss)
 
         # compute gradient and do optimizer step
         loss.backward()
         optimizer.step()
+
+        print(loss)
+        print(optimizer)
 
         # update loss running average
         loss_avg.update(loss.item())
