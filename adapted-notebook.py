@@ -289,9 +289,9 @@ class PneumoniaDataset(torchDataset):
             if self.transform is not None:
                 target = self.transform(target)
             summary = dict(
-                row_range=torch.ptp(torch.ptp(target, axis=0)),
-                column_range=torch.ptp(torch.ptp(target, axis=1)),
-                mean=torch.mean(target),
+                row_range=np.ptp(np.ptp(target.numpy(), axis=0)),
+                column_range=np.ptp(np.ptp(target.numpy(), axis=1)),
+                mean=np.mean(target.numpy()),
             )
             print("target transformed:", pId, summary)
             return img, target, pId
