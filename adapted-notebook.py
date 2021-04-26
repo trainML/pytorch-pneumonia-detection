@@ -633,7 +633,6 @@ class PneumoniaUNET(nn.Module):
 
 
 # print model architecture
-print(PneumoniaUNET())
 
 
 #
@@ -998,6 +997,10 @@ def train(
         optimizer.zero_grad()
         output_batch = model(input_batch)
 
+        print("inputs", input_batch)
+        print("labels", labels_batch)
+        print("outputs", output_batch)
+
         # compute loss
         loss = loss_fn(output_batch, labels_batch)
 
@@ -1133,6 +1136,8 @@ def train_and_evaluate(
     shape,
     restore_file=None,
 ):
+    print(lr_init, rescale_factor, shape)
+    print(pId_boxes_dict)
 
     # reload weights from restore_file if specified
     if restore_file is not None:
@@ -1254,10 +1259,12 @@ debug = True
 
 # define an instance of the model
 model = PneumoniaUNET().cuda() if gpu_available else PneumoniaUNET()
+print(model)
 # define the loss function
 loss_fn = (
     BCEWithLogitsLoss2d().cuda() if gpu_available else BCEWithLogitsLoss2d()
 )
+print(loss_fn)
 # define initial learning rate (will be reduced over epochs)
 lr_init = 0.5
 

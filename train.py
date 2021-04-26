@@ -202,6 +202,10 @@ def train_model(
         optimizer.zero_grad()
         output_batch = model(input_batch)
 
+        print("inputs", input_batch)
+        print("labels", labels_batch)
+        print("outputs", output_batch)
+
         # compute loss
         loss = loss_fn(output_batch, labels_batch)
         writer.add_scalar("Loss/train", loss.item(), i)
@@ -340,6 +344,8 @@ def train_and_evaluate(
     save_path=None,
     restore_file=None,
 ):
+    print(lr_init, rescale_factor, shape)
+    print(pId_boxes_dict)
 
     # reload weights from restore_file if specified
     if restore_file is not None:
@@ -673,14 +679,39 @@ def train(args):
         dataset=dataset_valid, batch_size=args.batch_size, shuffle=True
     )
 
+    # Check if train images have been properly loaded
+    print(
+        "{} images in train set and {} images in validation set.".format(
+            len(dataset_train), len(dataset_valid)
+        )
+    )
+
+    #
+    img_batch, target_batch, pId_batch = next(iter(loader_train))
+    print("Tensor batch size:", img_batch.size())
+
+    for i in np.random.choice(len(dataset_train), size=5, replace=False):
+        img, target, pId = dataset_train[i]  # picking an image with pneumonia
+        print("\nImage and mask shapes:", img.shape, target.shape)
+        print("Patient ID:", pId)
+        print("Image scale: {} - {}".format(img[0].min(), img[0].max()))
+        print(
+            "Target mask scale: {} - {}".format(
+                target[0].min(), target[0].max()
+            )
+        )
+
     # define an instance of the model
     model = PneumoniaUNET(
         bn_momentum=args.momentum,
         eps=args.eps,
         alpha_leaky=args.alpha_leaky,
     ).cuda()
+
+    print(model)
     # define the loss function
     loss_fn = BCEWithLogitsLoss2d().cuda()
+    print(loss_fn)
 
     num_epochs = 2 if args.debug else args.epochs
     num_steps_train = 50 if args.debug else len(loader_train)

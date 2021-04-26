@@ -78,6 +78,8 @@ class PneumoniaUNET(nn.Module):
     def __init__(self, bn_momentum=0.9, eps=1e-05, alpha_leaky=0.03):
         super(PneumoniaUNET, self).__init__()
 
+        print(bn_momentum, eps, alpha_leaky)
+
         self.down_1 = nn.Sequential(
             conv_block(
                 in_channels=1,
