@@ -7,6 +7,7 @@ from torch.utils.data.dataset import Dataset as torchDataset
 from scipy.ndimage.interpolation import map_coordinates
 from scipy.ndimage.filters import gaussian_filter
 from skimage.transform import resize
+from skimage.exposure import rescale_intensity
 import warnings
 
 
@@ -188,6 +189,7 @@ class PneumoniaDataset(torchDataset):
             # create target mask
             target = np.zeros((image_shape, image_shape))
             # if patient ID has associated target boxes (=if image contains pneumonia)
+            print(pId, self.boxes)
             if pId in self.boxes:
                 # loop through boxes
                 for box in self.boxes[pId]:
@@ -206,6 +208,7 @@ class PneumoniaDataset(torchDataset):
             # add trailing channel dimension
             target = np.expand_dims(target, -1)
             target = target.astype("uint8")
+            print(pId, target)
             # apply rotation augmentation
             if self.rotation_angle > 0:
                 target = tv.transforms.functional.to_pil_image(target)
@@ -215,6 +218,7 @@ class PneumoniaDataset(torchDataset):
             # apply transforms to target
             if self.transform is not None:
                 target = self.transform(target)
+            print(pId, target)
             return img, target, pId
         else:
             return img, pId

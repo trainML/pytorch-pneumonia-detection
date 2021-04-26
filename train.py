@@ -202,10 +202,6 @@ def train_model(
         optimizer.zero_grad()
         output_batch = model(input_batch)
 
-        print("inputs", input_batch)
-        print("labels", labels_batch)
-        print("outputs", output_batch)
-
         # compute loss
         loss = loss_fn(output_batch, labels_batch)
         writer.add_scalar("Loss/train", loss.item(), i)
