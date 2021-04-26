@@ -572,6 +572,7 @@ def evaluate_threshold(
     print(len(dataset_valid))
     for i in range(len(dataset_valid)):
         img, pId = dataset_valid[i]
+        start = time.time()
         target_boxes = (
             [
                 rescale_box_coordinates(box, rescale_factor)
@@ -580,14 +581,17 @@ def evaluate_threshold(
             if pId in pId_boxes_dict
             else []
         )
+        print("box time:", time.time() - start)
         prediction = predictions_valid[pId]
         predicted_boxes, confidences = parse_boxes(
             prediction, threshold=best_threshold, connectivity=None
         )
+        print("parse box time:", time.time() - start)
         avg_precision_img = average_precision_image(
             predicted_boxes, confidences, target_boxes, shape=img[0].shape[0]
         )
         img_precisions.append(avg_precision_img)
+        print("precision time:", time.time() - start)
         if image_save_path:
             save_image_prediction(
                 f"{image_save_path}/{pId}.png",
@@ -596,6 +600,7 @@ def evaluate_threshold(
                 predicted_boxes,
                 confidences,
             )
+            print("save file:", time.time() - start)
         if i % 100 == 0:  # print every 100
             # plt.imshow(
             #     img[0], cmap=mpl.cm.gist_gray
