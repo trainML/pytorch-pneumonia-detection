@@ -152,8 +152,8 @@ def make_parser():
         "--weight-decay",
         "--wd",
         type=float,
-        default=0.0005,
-        help="momentum argument for all optimizers",
+        default=0,
+        help="weight decay argument for all optimizers",
     )
     parser.add_argument(
         "--rescale-factor",
@@ -356,8 +356,8 @@ def train_and_evaluate(
     save_path=None,
     restore_file=None,
 ):
-    print(lr_init, rescale_factor, shape)
-    print(pId_boxes_dict)
+    # print(lr_init, rescale_factor, shape)
+    # print(pId_boxes_dict)
 
     # reload weights from restore_file if specified
     if restore_file is not None:
