@@ -189,9 +189,9 @@ class PneumoniaDataset(torchDataset):
             # create target mask
             target = np.zeros((image_shape, image_shape))
             # if patient ID has associated target boxes (=if image contains pneumonia)
-            print(pId, self.boxes)
             if pId in self.boxes:
                 # loop through boxes
+                print("boxes:", pId, self.boxes[pId])
                 for box in self.boxes[pId]:
                     # extract box coordinates
                     x, y, w, h = box
@@ -208,7 +208,7 @@ class PneumoniaDataset(torchDataset):
             # add trailing channel dimension
             target = np.expand_dims(target, -1)
             target = target.astype("uint8")
-            print(pId, target)
+            print("target:", pId, target)
             # apply rotation augmentation
             if self.rotation_angle > 0:
                 target = tv.transforms.functional.to_pil_image(target)
