@@ -194,10 +194,10 @@ class PneumoniaDataset(torchDataset):
             img = self.transform(img)
 
         summary = dict(
-            row_range=np.ptp(np.ptp(img, axis=0)),
-            column_range=np.ptp(np.ptp(img, axis=1)),
-            mean=np.mean(img),
-            shape=img.shape,
+            row_range=np.ptp(np.ptp(img.numpy(), axis=0)),
+            column_range=np.ptp(np.ptp(img.numpy(), axis=1)),
+            mean=np.mean(img.numpy()),
+            shape=img.numpy().shape,
         )
         print("modified image", summary)
         if not self.predict:
