@@ -274,10 +274,9 @@ class PneumoniaDataset(torchDataset):
             target = np.expand_dims(target, -1)
             target = target.astype("uint8")
             summary = dict(
-                row_range=np.ptp(target, axis=0),
-                column_range=np.ptp(target, axis=1),
-                row_mean=np.mean(target, axis=0),
-                column_mean=np.mean(target, axis=0),
+                row_range=np.ptp(np.ptp(target, axis=0)),
+                column_range=np.ptp(np.ptp(target, axis=1)),
+                mean=np.mean(target),
             )
             print("target:", pId, summary)
             # apply rotation augmentation
@@ -290,10 +289,9 @@ class PneumoniaDataset(torchDataset):
             if self.transform is not None:
                 target = self.transform(target)
             summary = dict(
-                row_range=np.ptp(target, axis=0),
-                column_range=np.ptp(target, axis=1),
-                row_mean=np.mean(target, axis=0),
-                column_mean=np.mean(target, axis=0),
+                row_range=torch.ptp(torch.ptp(target, axis=0)),
+                column_range=torch.ptp(torch.ptp(target, axis=1)),
+                mean=torch.mean(target),
             )
             print("target transformed:", pId, summary)
             return img, target, pId
