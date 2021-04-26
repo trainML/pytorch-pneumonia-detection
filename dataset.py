@@ -57,13 +57,13 @@ def elastic_transform(image, alpha, sigma, random_state=None):
     assert len(image.shape) == 2, "Image must have 2 dimensions."
 
     if random_state is None:
-        random_state = np.random.default_rng()
+        random_state = np.random.RandomState(None)
 
     shape = image.shape
 
     dx = (
         gaussian_filter(
-            (random_state.random(size=shape) * 2 - 1),
+            (random_state.rand(*shape) * 2 - 1),
             sigma,
             mode="constant",
             cval=0,
@@ -72,7 +72,7 @@ def elastic_transform(image, alpha, sigma, random_state=None):
     )
     dy = (
         gaussian_filter(
-            (random_state.random(size=shape) * 2 - 1),
+            (random_state.rand(*shape) * 2 - 1),
             sigma,
             mode="constant",
             cval=0,
@@ -128,7 +128,7 @@ class PneumoniaDataset(torchDataset):
         self.transform = transform
         self.rotation_angle = rotation_angle
         self.warping = warping
-        self.random_state = np.random.default_rng(seed=seed)
+        self.random_state = np.random.RandomState(seed=seed)
 
         self.data_path = f"{self.root}/"
 
