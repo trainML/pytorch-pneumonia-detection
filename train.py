@@ -190,6 +190,7 @@ def train_model(
     rescale_factor,
     shape,
     writer,
+    epoch=0,
     save_summary_steps=5,
 ):
     # set model to train model
@@ -216,7 +217,7 @@ def train_model(
 
         # compute loss
         loss = loss_fn(output_batch, labels_batch)
-        writer.add_scalar("Loss/train", loss.item(), i)
+        writer.add_scalar("Loss/train", loss.item(), i + epoch * num_steps)
 
         # compute gradient and do optimizer step
         loss.backward()
@@ -226,6 +227,7 @@ def train_model(
         loss_avg.update(loss.item())
         loss_t_hist_ep.append(loss.item())
         loss_avg_t_hist_ep.append(loss_avg())
+        writer.add_scalar("Avg Loss/train", loss_avg(), i + epoch * num_steps)
 
         # Evaluate summaries only once in a while
         if i % save_summary_steps == 0:
@@ -236,7 +238,9 @@ def train_model(
                 output_batch, pIds_batch, pId_boxes_dict, rescale_factor, shape
             )
             prec_t_hist_ep.append(prec_batch)
-            writer.add_scalar("Precision/train", prec_batch, i)
+            writer.add_scalar(
+                "Precision/train", prec_batch, i + epoch * num_steps
+            )
             # log results
             summary_batch_string = "batch loss = {:05.7f} ;  ".format(
                 loss.item()
@@ -275,6 +279,7 @@ def evaluate_model(
     rescale_factor,
     shape,
     writer,
+    epoch=0,
 ):
 
     # set model to evaluation mode
@@ -297,7 +302,7 @@ def evaluate_model(
         output_batch = model(input_batch)
         # compute loss of batch
         loss = loss_fn(output_batch, labels_batch)
-        writer.add_scalar("Loss/validate", loss.item(), i)
+        writer.add_scalar("Loss/validate", loss.item(), i + epoch * num_steps)
         losses.append(loss.item())
 
         # extract data from torch Variable, move to cpu
@@ -311,7 +316,9 @@ def evaluate_model(
             shape,
             return_array=True,
         )
-        writer.add_scalar("Precision/validate", np.nanmean(prec_batch), i)
+        writer.add_scalar(
+            "Precision/validate", np.nanmean(prec_batch), i + epoch * num_steps
+        )
         for p in prec_batch:
             precisions.append(p)
         print("--- Validation batch {} / {}: ".format(i, num_steps))
@@ -429,6 +436,7 @@ def train_and_evaluate(
             rescale_factor,
             shape,
             writer,
+            epoch=epoch,
         )
         loss_avg_t_history += loss_avg_t_hist_ep
         loss_t_history += loss_t_hist_ep
@@ -444,6 +452,7 @@ def train_and_evaluate(
             rescale_factor,
             shape,
             writer,
+            epoch=epoch,
         )
 
         val_loss = val_metrics["loss"]
