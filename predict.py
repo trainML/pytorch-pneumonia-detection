@@ -134,6 +134,8 @@ def save_image_prediction(file, img, prediction, predicted_boxes, confidences):
     print("draw_boxes time:", time.time() - start)
     plt.savefig(file)
     print("save figure:", time.time() - start)
+    plt.close()
+    print("close figure:", time.time() - start)
 
 
 def predict(model, dataloader):
