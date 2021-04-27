@@ -109,8 +109,7 @@ def make_parser():
     parser.add_argument(
         "--no-save-images",
         dest="save_images",
-        action="save_images",
-        default=False,
+        action="store_false",
         help="do not save annotated images during training process",
     )
 
