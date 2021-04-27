@@ -99,6 +99,20 @@ def make_parser():
         default=False,
         help="do not perform grid search for box threshold",
     )
+    parser.add_argument(
+        "--save-images",
+        dest="save_images",
+        action="store_true",
+        default=True,
+        help="save annotated images during training process",
+    )
+    parser.add_argument(
+        "--no-save-images",
+        dest="save_images",
+        action="save_images",
+        default=False,
+        help="do not save annotated images during training process",
+    )
 
     # Hyperparameters
     parser.add_argument(
@@ -796,7 +810,7 @@ def train(args):
         best_threshold,
         pId_boxes_dict,
         args.rescale_factor,
-        image_save_path=f"{args.save}/images" if args.save else None,
+        image_save_path=f"{args.save}/images" if args.save_images else None,
     )
 
     print(
