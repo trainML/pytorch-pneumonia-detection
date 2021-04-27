@@ -217,7 +217,7 @@ class PneumoniaDataset(torchDataset):
             mean=np.mean(img),
             shape=img.shape,
         )
-        print("original image", summary)
+        # print("original image", summary)
         # check if image is square
         if img.shape[0] != img.shape[1]:
             raise RuntimeError(
@@ -264,7 +264,7 @@ class PneumoniaDataset(torchDataset):
             mean=np.mean(img.numpy()),
             shape=img.numpy().shape,
         )
-        print("modified image", summary)
+        # print("modified image", summary)
         if not self.predict:
             # create target mask
             target = np.zeros((image_shape, image_shape))
@@ -272,7 +272,7 @@ class PneumoniaDataset(torchDataset):
 
             if pId in self.boxes:
                 # loop through boxes
-                print("boxes:", pId, self.boxes[pId])
+                # print("boxes:", pId, self.boxes[pId])
                 for box in self.boxes[pId]:
                     # extract box coordinates
                     x, y, w, h = box
@@ -295,7 +295,7 @@ class PneumoniaDataset(torchDataset):
                 mean=np.mean(target),
                 shape=target.shape,
             )
-            print("target:", pId, summary)
+            # print("target:", pId, summary)
             # apply rotation augmentation
             if self.rotation_angle > 0:
                 target = tv.transforms.functional.to_pil_image(target)
@@ -311,7 +311,7 @@ class PneumoniaDataset(torchDataset):
                 mean=np.mean(target.numpy()),
                 shape=target.numpy().shape,
             )
-            print("target transformed:", pId, summary)
+            # print("target transformed:", pId, summary)
             return img, target, pId
         else:
             return img, pId
@@ -1031,14 +1031,14 @@ def train(
 
         # compute loss
         loss = loss_fn(output_batch, labels_batch)
-        print(loss)
+        # print(loss)
 
         # compute gradient and do optimizer step
         loss.backward()
         optimizer.step()
 
-        print(loss)
-        print(optimizer)
+        # print(loss)
+        # print(optimizer)
 
         # update loss running average
         loss_avg.update(loss.item())
@@ -1168,8 +1168,8 @@ def train_and_evaluate(
     shape,
     restore_file=None,
 ):
-    print(lr_init, rescale_factor, shape)
-    print(pId_boxes_dict)
+    # print(lr_init, rescale_factor, shape)
+    # print(pId_boxes_dict)
 
     # reload weights from restore_file if specified
     if restore_file is not None:
