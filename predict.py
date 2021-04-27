@@ -8,7 +8,7 @@ from torch.utils.data import DataLoader
 import torchvision as tv
 import matplotlib as mpl
 
-mpl.use("cairo.png")
+mpl.use("cairo")
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 from torch.autograd import Variable
