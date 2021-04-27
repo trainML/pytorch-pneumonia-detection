@@ -1,7 +1,20 @@
 # To add a new cell, type '# '
 # To add a new markdown cell, type '#  [markdown]'
+#
+from IPython import get_ipython
+
 #  [markdown]
-# ## Largely adapted from files in the original_source folder
+# ## Source: Guilia Savorgnan https://www.kaggle.com/giuliasavorgnan/0-123-lb-pytorch-unet-run-on-google-cloud
+#  [markdown]
+# # UNET Pytorch implementation
+# This notebook contains a custom UNET segmentation model that I implemented from scratch using pytorch, applied to the RSNA pneumonia challenge. The model was trained for 10 epochs (< 5 hours) on Google Cloud using 8 CPUs and 1 NVIDIA TESLA P100 GPU (specs: PyTorch 0.4.1, Python 3.6.3, CUDA 9.2.148.1, cuDNN 7.2.1).
+# The cnn architecture was inspired to [this model](https://github.com/ternaus/TernausNet), but adapted to a single-channel input and without using transfer learning.
+#
+# Unfortunately, it cannot be run on Kaggle using a batch_size of 25 images as in the original setup I ran on Google Cloud (GPU out of memory).
+# **However, you can find the LB 0.123 submission file in the data attached to this kernel. I created a public dataset called "pytorch-unet-pneumonia-output" where I put the final submission file and some outputs obtained from the run on Google Cloud.**
+#
+# Feedback/questions are most welcome!
+#
 
 #
 
@@ -25,10 +38,8 @@ from torch.autograd import Variable
 
 import numpy as np
 import pandas as pd
-import matplotlib as mpl
-
-mpl.use("cairo")
 import matplotlib.pyplot as plt
+import matplotlib as mpl
 from matplotlib.patches import Rectangle
 
 import shutil
@@ -44,30 +55,39 @@ gpu_available = True
 
 original_image_shape = 1024
 
-datapath_orig = os.environ.get("TRAINML_DATA_PATH")
-image_path = datapath_orig + "/stage_2_train_images"
-datapath_prep = os.environ.get("TRAINML_MODEL_PATH")
-datapath_out = os.environ.get("TRAINML_MODEL_PATH")
+datapath_orig = "../input/rsna-pneumonia-detection-challenge/"
+datapath_prep = "../input/start-here-beginner-intro-to-lung-opacity-s1/"
+datapath_out = "../input/pytorchunetpneumoniaoutput/"
 
-
-#
-# from data_processing import build_training_csv
-# build_training_csv(image_path, datapath_orig, datapath_prep)
-
+#  [markdown]
+# Below I import the preprocessed labels data that I generated in a [previous eda kernel](https://www.kaggle.com/giuliasavorgnan/start-here-beginner-intro-to-lung-opacity-s1).
 
 #
-df_train = pd.read_csv(datapath_prep + "/train.csv")
+# read train dataset
+df_train = pd.read_csv(datapath_prep + "train.csv")
+# read test dataset
+df_test = pd.read_csv(datapath_prep + "test.csv")
 df_train.head(3)
 
+#  [markdown]
+# In an attempt to control the number of false positive boxes, I calculate the distribution of the boxes' area and manually select a lower limit for the unet model.
 
 #
+# calculate minimum box area as benchmark for CNN model
 df_train["box_area"] = df_train["width"] * df_train["height"]
 df_train["box_area"].hist(bins=100)
 df_train["box_area"].describe()
 
 
 #
+# arbitrary value for minimum box area in the CNN model
 min_box_area = 10000
+
+#  [markdown]
+# The following code prepares the training data in a useful format for the unet model.
+
+#
+# shuffle and create patient ID list, then split into train and validation sets
 validation_frac = 0.10
 
 df_train = df_train.sample(
@@ -89,10 +109,31 @@ print(
     )
 )
 
+# get test set patient IDs
+pIds_test = df_test["patientId"].unique()
+print("{} patient IDs in test set.".format(len(pIds_test)))
+
 
 #
-from dataset import get_boxes_per_patient
+def get_boxes_per_patient(df, pId):
+    """
+    Given the dataset and one patient ID,
+    return an array of all the bounding boxes and their labels associated with that patient ID.
+    Example of return:
+    array([[x1, y1, width1, height1],
+           [x2, y2, width2, height2]])
+    """
 
+    boxes = (
+        df.loc[df["patientId"] == pId][["x", "y", "width", "height"]]
+        .astype("int")
+        .values.tolist()
+    )
+    return boxes
+
+
+#
+# create dictionary of {patientId : list of boxes}
 pId_boxes_dict = {}
 for pId in (
     df_train.loc[(df_train["Target"] == 1)]["patientId"].unique().tolist()
@@ -104,9 +145,10 @@ print(
     )
 )
 
+#  [markdown]
+# The following code pertains to the unet model proper.
 
 #
-
 # define a MinMaxScaler function for the images
 def imgMinMaxScaler(img, scale_range):
     """
@@ -125,6 +167,7 @@ def imgMinMaxScaler(img, scale_range):
     return img_scaled
 
 
+#
 # define a "warping" image/mask function
 def elastic_transform(image, alpha, sigma, random_state=None):
     """Elastic deformation of images as described in [Simard2003]_.
@@ -162,6 +205,7 @@ def elastic_transform(image, alpha, sigma, random_state=None):
     return image_warped
 
 
+#
 # define the data generator class
 class PneumoniaDataset(torchDataset):
     """
@@ -172,6 +216,7 @@ class PneumoniaDataset(torchDataset):
     def __init__(
         self,
         root,
+        subset,
         pIds,
         predict,
         boxes,
@@ -194,6 +239,13 @@ class PneumoniaDataset(torchDataset):
 
         # initialize variables
         self.root = os.path.expanduser(root)
+        self.subset = subset
+        if self.subset not in ["train", "test"]:
+            raise RuntimeError(
+                "Invalid subset "
+                + self.subset
+                + ", it must be one of: 'train' or 'test'"
+            )
         self.pIds = pIds
         self.predict = predict
         self.boxes = boxes
@@ -202,7 +254,7 @@ class PneumoniaDataset(torchDataset):
         self.rotation_angle = rotation_angle
         self.warping = warping
 
-        self.data_path = f"{self.root}/"
+        self.data_path = self.root + "stage_1_" + self.subset + "_images/"
 
     def __getitem__(self, index):
         # get the corresponding pId
@@ -211,13 +263,6 @@ class PneumoniaDataset(torchDataset):
         img = pydicom.dcmread(
             os.path.join(self.data_path, pId + ".dcm")
         ).pixel_array
-        summary = dict(
-            row_range=np.ptp(np.ptp(img, axis=0)),
-            column_range=np.ptp(np.ptp(img, axis=1)),
-            mean=np.mean(img),
-            shape=img.shape,
-        )
-        print("original image", summary)
         # check if image is square
         if img.shape[0] != img.shape[1]:
             raise RuntimeError(
@@ -258,21 +303,12 @@ class PneumoniaDataset(torchDataset):
         if self.transform is not None:
             img = self.transform(img)
 
-        summary = dict(
-            row_range=np.ptp(np.ptp(img.numpy(), axis=0)),
-            column_range=np.ptp(np.ptp(img.numpy(), axis=1)),
-            mean=np.mean(img.numpy()),
-            shape=img.numpy().shape,
-        )
-        print("modified image", summary)
         if not self.predict:
             # create target mask
             target = np.zeros((image_shape, image_shape))
             # if patient ID has associated target boxes (=if image contains pneumonia)
-
             if pId in self.boxes:
                 # loop through boxes
-                print("boxes:", pId, self.boxes[pId])
                 for box in self.boxes[pId]:
                     # extract box coordinates
                     x, y, w, h = box
@@ -289,13 +325,6 @@ class PneumoniaDataset(torchDataset):
             # add trailing channel dimension
             target = np.expand_dims(target, -1)
             target = target.astype("uint8")
-            summary = dict(
-                row_range=np.ptp(np.ptp(target, axis=0)),
-                column_range=np.ptp(np.ptp(target, axis=1)),
-                mean=np.mean(target),
-                shape=target.shape,
-            )
-            print("target:", pId, summary)
             # apply rotation augmentation
             if self.rotation_angle > 0:
                 target = tv.transforms.functional.to_pil_image(target)
@@ -305,13 +334,6 @@ class PneumoniaDataset(torchDataset):
             # apply transforms to target
             if self.transform is not None:
                 target = self.transform(target)
-            summary = dict(
-                row_range=np.ptp(np.ptp(target.numpy(), axis=0)),
-                column_range=np.ptp(np.ptp(target.numpy(), axis=1)),
-                mean=np.mean(target.numpy()),
-                shape=target.numpy().shape,
-            )
-            print("target transformed:", pId, summary)
             return img, target, pId
         else:
             return img, pId
@@ -321,7 +343,7 @@ class PneumoniaDataset(torchDataset):
 
 
 #
-
+# manual model parameters
 rescale_factor = 4  # resize factor to reduce image size (new_image_shape = original_image_shape / rescale_factor)
 batch_size = 6  # I used 25 on GCP
 
@@ -334,7 +356,8 @@ transform = tv.transforms.Compose([tv.transforms.ToTensor()])
 
 # create datasets
 dataset_train = PneumoniaDataset(
-    root=image_path,
+    root=datapath_orig,
+    subset="train",
     pIds=pIds_train,
     predict=False,
     boxes=pId_boxes_dict,
@@ -345,10 +368,23 @@ dataset_train = PneumoniaDataset(
 )
 
 dataset_valid = PneumoniaDataset(
-    root=image_path,
+    root=datapath_orig,
+    subset="train",
     pIds=pIds_valid,
     predict=False,
     boxes=pId_boxes_dict,
+    rescale_factor=rescale_factor,
+    transform=transform,
+    rotation_angle=0,
+    warping=False,
+)
+
+dataset_test = PneumoniaDataset(
+    root=datapath_orig,
+    subset="test",
+    pIds=pIds_test,
+    predict=True,
+    boxes=None,
     rescale_factor=rescale_factor,
     transform=transform,
     rotation_angle=0,
@@ -364,21 +400,20 @@ loader_valid = DataLoader(
     dataset=dataset_valid, batch_size=batch_size, shuffle=True
 )
 
-
-# Check if train images have been properly loaded
-print(
-    "{} images in train set and {} images in validation set.".format(
-        len(dataset_train), len(dataset_valid)
-    )
+loader_test = DataLoader(
+    dataset=dataset_test, batch_size=batch_size, shuffle=False
 )
 
 
 #
+# Check if train images have been properly loaded
+print(
+    "{} images in train set, {} images in validation set, and {} images in test set.".format(
+        len(dataset_train), len(dataset_valid), len(dataset_test)
+    )
+)
 img_batch, target_batch, pId_batch = next(iter(loader_train))
 print("Tensor batch size:", img_batch.size())
-
-
-#
 
 # Display some examples
 for i in np.random.choice(len(dataset_train), size=5, replace=False):
@@ -398,7 +433,22 @@ for i in np.random.choice(len(dataset_train), size=5, replace=False):
 
 
 #
+# Check if test images have been properly loaded
+img, pId = dataset_test[0]
+print("Image shape:", img.shape)
+print("Patient ID:", pId)
+print("Image scale: {} - {}".format(img[0].min(), img[0].max()))
+plt.imshow(
+    img[0], cmap=mpl.cm.gist_gray
+)  # [0] is the channel index (here there's just one channel)
 
+#  [markdown]
+# The basic block (conv_block) of the unet model consists of a [2D convolution - batch normalization - activation] sequence. The 2D convolution uses 3x3 filters with stride=1 and padding=1. The activation function is a leaky ReLU with alpha=0.03.
+# NOTE: I have not attempted yet to optimize these hyperparameters.
+#
+# The second function (conv_t_block) does the upsampling for the upscaling half of the unet.
+
+#
 # Define the nn convolutional block
 class conv_block(nn.Module):
     """
@@ -464,6 +514,7 @@ class conv_t_block(nn.Module):
         return self.activ(self.bn(self.conv_t(x, output_size=output_size)))
 
 
+#
 # the actual model function is defined here
 # NOTE: the comments are meant to help understand/check the input-output sizes of the tensor
 #       and they assume an input image size of 256x256,
@@ -595,6 +646,7 @@ class PneumoniaUNET(nn.Module):
         return out
 
 
+#
 # # the actual model function is defined here
 # # NOTE: the comments are meant to help understand/check the input-output sizes of the tensor
 # #       and they assume an input image size of 256x256,
@@ -664,12 +716,12 @@ class PneumoniaUNET(nn.Module):
 #         return out
 
 
+#
 # print model architecture
+print(PneumoniaUNET())
 
 
 #
-
-
 # Create the loss function
 # Define the 2D Sigmoid + Binary Cross Entropy loss function BCEWithLogitsLoss
 # TBD add weights for unbalanced class
@@ -685,6 +737,7 @@ class BCEWithLogitsLoss2d(nn.Module):
         return self.loss(scores_flat, targets_flat)
 
 
+#
 # Define auxiliary metric functions
 
 # define function that creates a square mask for a box from its coordinates
@@ -946,6 +999,7 @@ def average_precision_batch(
 # average_precision_batch(targets, pIds, pId_boxes_dict, rescale_factor, shape=256)
 
 
+#
 class RunningAverage:
     """A simple class that maintains the running average of a quantity
 
@@ -970,6 +1024,7 @@ class RunningAverage:
         return self.total / float(self.steps)
 
 
+#
 def save_checkpoint(state, is_best, metric):
     """Saves model and training parameters at 'last.pth.tar'. If is_best==True, also saves
     'best.pth.tar'
@@ -984,8 +1039,6 @@ def save_checkpoint(state, is_best, metric):
 
 
 #
-
-
 # define the training function
 def train(
     model,
@@ -1015,12 +1068,12 @@ def train(
             break
         # Convert torch tensor to Variable
         input_batch = (
-            Variable(input_batch).cuda()
+            Variable(input_batch).cuda(async=True)
             if gpu_available
             else Variable(input_batch).float()
         )
         labels_batch = (
-            Variable(labels_batch).cuda()
+            Variable(labels_batch).cuda(async=True)
             if gpu_available
             else Variable(labels_batch).float()
         )
@@ -1031,14 +1084,10 @@ def train(
 
         # compute loss
         loss = loss_fn(output_batch, labels_batch)
-        print(loss)
 
         # compute gradient and do optimizer step
         loss.backward()
         optimizer.step()
-
-        print(loss)
-        print(optimizer)
 
         # update loss running average
         loss_avg.update(loss.item())
@@ -1083,6 +1132,7 @@ def train(
     return loss_avg_t_hist_ep, loss_t_hist_ep, prec_t_hist_ep
 
 
+#
 def evaluate(
     model,
     dataloader,
@@ -1107,12 +1157,12 @@ def evaluate(
             break
         # Convert torch tensor to Variable
         input_batch = (
-            Variable(input_batch).cuda()
+            Variable(input_batch).cuda(async=True)
             if gpu_available
             else Variable(input_batch).float()
         )
         labels_batch = (
-            Variable(labels_batch).cuda()
+            Variable(labels_batch).cuda(async=True)
             if gpu_available
             else Variable(labels_batch).float()
         )
@@ -1154,6 +1204,7 @@ def evaluate(
     return metrics_mean
 
 
+#
 def train_and_evaluate(
     model,
     train_dataloader,
@@ -1168,8 +1219,6 @@ def train_and_evaluate(
     shape,
     restore_file=None,
 ):
-    print(lr_init, rescale_factor, shape)
-    print(pId_boxes_dict)
 
     # reload weights from restore_file if specified
     if restore_file is not None:
@@ -1285,18 +1334,43 @@ def train_and_evaluate(
 
 
 #
+def predict(model, dataloader):
 
+    # set model to evaluation mode
+    model.eval()
+
+    predictions = {}
+
+    for i, (test_batch, pIds) in enumerate(dataloader):
+        print("Predicting batch {} / {}.".format(i + 1, len(dataloader)))
+        # Convert torch tensor to Variable
+        test_batch = (
+            Variable(test_batch).cuda(async=True)
+            if gpu_available
+            else Variable(test_batch).float()
+        )
+
+        # compute output
+        output_batch = model(test_batch)
+        sig = nn.Sigmoid().cuda()
+        output_batch = sig(output_batch)
+        output_batch = output_batch.data.cpu().numpy()
+        for pId, output in zip(pIds, output_batch):
+            predictions[pId] = output
+
+    return predictions
+
+
+#
 # train and evaluate the model
 debug = False
 
 # define an instance of the model
 model = PneumoniaUNET().cuda() if gpu_available else PneumoniaUNET()
-print(model)
 # define the loss function
 loss_fn = (
     BCEWithLogitsLoss2d().cuda() if gpu_available else BCEWithLogitsLoss2d()
 )
-print(loss_fn)
 # define initial learning rate (will be reduced over epochs)
 lr_init = 0.5
 
@@ -1305,9 +1379,6 @@ num_steps_train = 50 if debug else len(loader_train)
 num_steps_eval = 10 if debug else len(loader_valid)
 
 shape = int(round(original_image_shape / rescale_factor))
-
-
-#
 
 # Train the model
 print("Starting training for {} epochs".format(num_epochs))
@@ -1327,8 +1398,6 @@ histories, best_models = train_and_evaluate(
 
 
 #
-
-
 # visualize training loss history
 plt.plot(
     range(len(histories["loss train"])),
@@ -1352,6 +1421,7 @@ plt.plot(
 plt.legend()
 
 
+#
 plt.plot(
     range(len(histories["precision train"])),
     histories["precision train"],
@@ -1367,46 +1437,16 @@ plt.plot(
 plt.legend()
 
 
+#
 # pick model with best precision
 best_model = best_models["best precision model"]
 
 
 #
-
-
-def predict(model, dataloader):
-
-    # set model to evaluation mode
-    model.eval()
-
-    predictions = {}
-
-    for i, (test_batch, pIds) in enumerate(dataloader):
-        print("Predicting batch {} / {}.".format(i + 1, len(dataloader)))
-        # Convert torch tensor to Variable
-        test_batch = (
-            Variable(test_batch).cuda()
-            if gpu_available
-            else Variable(test_batch).float()
-        )
-
-        # compute output
-        output_batch = model(test_batch)
-        sig = nn.Sigmoid().cuda()
-        output_batch = sig(output_batch)
-        output_batch = output_batch.data.cpu().numpy()
-        for pId, output in zip(pIds, output_batch):
-            predictions[pId] = output
-
-    return predictions
-
-
-#
-
-
 # create predictions for the validation set to compare against ground truth
 dataset_valid = PneumoniaDataset(
-    root=image_path,
+    root=datapath_orig,
+    subset="train",
     pIds=pIds_valid,
     predict=True,
     boxes=None,
@@ -1422,8 +1462,6 @@ print("Predicted {} validation images.".format(len(predictions_valid)))
 
 
 #
-
-
 def rescale_box_coordinates(box, rescale_factor):
     x, y, w, h = box
     x = int(round(x / rescale_factor))
@@ -1433,6 +1471,7 @@ def rescale_box_coordinates(box, rescale_factor):
     return [x, y, w, h]
 
 
+#
 def draw_boxes(predicted_boxes, confidences, target_boxes, ax, angle=0):
     if len(predicted_boxes) > 0:
         for box, c in zip(predicted_boxes, confidences):
@@ -1485,54 +1524,48 @@ def draw_boxes(predicted_boxes, confidences, target_boxes, ax, angle=0):
     return ax
 
 
+#
 # grid search to cross-validate the best threshold for the boxes
-if debug:
-    best_threshold = 0.2
-else:
-    best_threshold = None
-    best_avg_precision_valid = 0.0
-    thresholds = np.arange(0.01, 0.60, 0.01)
-    avg_precision_valids = []
-    for threshold in thresholds:
-        precision_valid = []
-        for i in range(len(dataset_valid)):
-            img, pId = dataset_valid[i]
-            target_boxes = (
-                [
-                    rescale_box_coordinates(box, rescale_factor)
-                    for box in pId_boxes_dict[pId]
-                ]
-                if pId in pId_boxes_dict
-                else []
-            )
-            prediction = predictions_valid[pId]
-            predicted_boxes, confidences = parse_boxes(
-                prediction, threshold=threshold, connectivity=None
-            )
-            avg_precision_img = average_precision_image(
-                predicted_boxes,
-                confidences,
-                target_boxes,
-                shape=img[0].shape[0],
-            )
-            precision_valid.append(avg_precision_img)
-        avg_precision_valid = np.nanmean(precision_valid)
-        avg_precision_valids.append(avg_precision_valid)
-        print(
-            "Threshold: {}, average precision validation: {:03.5f}".format(
-                threshold, avg_precision_valid
-            )
+best_threshold = None
+best_avg_precision_valid = 0.0
+thresholds = np.arange(0.01, 0.60, 0.01)
+avg_precision_valids = []
+for threshold in thresholds:
+    precision_valid = []
+    for i in range(len(dataset_valid)):
+        img, pId = dataset_valid[i]
+        target_boxes = (
+            [
+                rescale_box_coordinates(box, rescale_factor)
+                for box in pId_boxes_dict[pId]
+            ]
+            if pId in pId_boxes_dict
+            else []
         )
-        if avg_precision_valid > best_avg_precision_valid:
-            print("Found new best average precision validation!")
-            best_avg_precision_valid = avg_precision_valid
-            best_threshold = threshold
-    plt.plot(thresholds, avg_precision_valids)
+        prediction = predictions_valid[pId]
+        predicted_boxes, confidences = parse_boxes(
+            prediction, threshold=threshold, connectivity=None
+        )
+        avg_precision_img = average_precision_image(
+            predicted_boxes, confidences, target_boxes, shape=img[0].shape[0]
+        )
+        precision_valid.append(avg_precision_img)
+    avg_precision_valid = np.nanmean(precision_valid)
+    avg_precision_valids.append(avg_precision_valid)
+    print(
+        "Threshold: {}, average precision validation: {:03.5f}".format(
+            threshold, avg_precision_valid
+        )
+    )
+    if avg_precision_valid > best_avg_precision_valid:
+        print("Found new best average precision validation!")
+        best_avg_precision_valid = avg_precision_valid
+        best_threshold = threshold
+plt.plot(thresholds, avg_precision_valids)
 
-plt.close()
+
+#
 # check the results on the validation set
-img_precisions = []
-annotations = dict()
 for i in range(len(dataset_valid)):
     img, pId = dataset_valid[i]
     target_boxes = (
@@ -1550,17 +1583,12 @@ for i in range(len(dataset_valid)):
     avg_precision_img = average_precision_image(
         predicted_boxes, confidences, target_boxes, shape=img[0].shape[0]
     )
-    img_precisions.append(avg_precision_img)
-    annotations[pId] = prediction_string(predicted_boxes, confidences)
     if i % 100 == 0:  # print every 100
         plt.imshow(
             img[0], cmap=mpl.cm.gist_gray
         )  # [0] is the channel index (here there's just one channel)
         plt.imshow(prediction[0], cmap=mpl.cm.jet, alpha=0.5)
         draw_boxes(predicted_boxes, confidences, target_boxes, plt.gca())
-        plt.savefig(f"{datapath_out}/{pId}.png")
-        plt.close()
-        print("Prediction for :", pId)
         print(
             "Prediction mask scale:",
             prediction[0].min(),
@@ -1573,6 +1601,53 @@ for i in range(len(dataset_valid)):
         )
         print("Ground truth boxes:", target_boxes)
         print("Average precision image: {:05.5f}".format(avg_precision_img))
+        plt.show()
+
+
+#
+# create submission predictions for the test set
+predictions_test = predict(best_model, loader_test)
+
+
+#
+print("Predicted {} images.".format(len(predictions_test)))
+for k, v in predictions_test.items():
+    print(v.shape)
+    break
+
+
+#
+df_sub = df_test[["patientId"]].copy(deep=True)
+
+
+def get_prediction_string_per_pId(pId):
+    prediction = predictions_test[pId]
+    predicted_boxes, confidences = parse_boxes(
+        prediction, threshold=best_threshold, connectivity=None
+    )
+    predicted_boxes = [
+        rescale_box_coordinates(box, 1 / rescale_factor)
+        for box in predicted_boxes
+    ]
+    return prediction_string(predicted_boxes, confidences)
+
+
+df_sub["predictionString"] = df_sub["patientId"].apply(
+    lambda x: get_prediction_string_per_pId(x) if x in pIds_test else ""
+)
+print(
+    "Number of non null prediction strings: {} ({:05.2f}%)".format(
+        df_sub.loc[df_sub["predictionString"] != ""].shape[0],
+        100.0
+        * df_sub.loc[df_sub["predictionString"] != ""].shape[0]
+        / df_sub.shape[0],
+    )
+)
+df_sub.head(10)
+
+
+#
+df_sub.to_csv("submission.csv", index=False)
 
 
 #

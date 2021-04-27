@@ -791,7 +791,7 @@ def train(args):
     )
 
     print(
-        f"Total Average Precision: {sum(img_precisions) / len(img_precisions)}"
+        f"Total Average Precision: {np.nansum(img_precisions) / len(img_precisions)}"
     )
 
     save_checkpoint(
