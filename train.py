@@ -217,14 +217,10 @@ def train_model(
         # compute loss
         loss = loss_fn(output_batch, labels_batch)
         writer.add_scalar("Loss/train", loss.item(), i)
-        # print(loss)
 
         # compute gradient and do optimizer step
         loss.backward()
         optimizer.step()
-
-        # print(loss)
-        # print(optimizer)
 
         # update loss running average
         loss_avg.update(loss.item())
@@ -356,8 +352,6 @@ def train_and_evaluate(
     save_path=None,
     restore_file=None,
 ):
-    # print(lr_init, rescale_factor, shape)
-    # print(pId_boxes_dict)
 
     # reload weights from restore_file if specified
     if restore_file is not None:
@@ -569,7 +563,6 @@ def evaluate_threshold(
     image_save_path=None,
 ):
     img_precisions = []
-    print(len(dataset_valid))
     for i in range(len(dataset_valid)):
         img, pId = dataset_valid[i]
         target_boxes = (
@@ -723,7 +716,6 @@ def train(args):
     print(model)
     # define the loss function
     loss_fn = BCEWithLogitsLoss2d().cuda()
-    print(loss_fn)
 
     num_epochs = 2 if args.debug else args.epochs
     num_steps_train = 50 if args.debug else len(loader_train)

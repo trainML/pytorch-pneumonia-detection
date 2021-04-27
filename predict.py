@@ -123,19 +123,13 @@ def draw_boxes(predicted_boxes, confidences, target_boxes, ax, angle=0):
 
 
 def save_image_prediction(file, img, prediction, predicted_boxes, confidences):
-    start = time.time()
     plt.imshow(
         img[0], cmap=mpl.cm.gist_gray
     )  # [0] is the channel index (here there's just one channel)
-    print("add image time:", time.time() - start)
     plt.imshow(prediction[0], cmap=mpl.cm.jet, alpha=0.5)
-    print("add prediction time:", time.time() - start)
     draw_boxes(predicted_boxes, confidences, [], plt.gca())
-    print("draw_boxes time:", time.time() - start)
     plt.savefig(file)
-    print("save figure:", time.time() - start)
     plt.close()
-    print("close figure:", time.time() - start)
 
 
 def predict(model, dataloader):
