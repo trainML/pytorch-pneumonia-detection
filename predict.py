@@ -6,8 +6,10 @@ import time
 from torch import nn
 from torch.utils.data import DataLoader
 import torchvision as tv
-import matplotlib.pyplot as plt
 import matplotlib as mpl
+
+mpl.use("cairo.png")
+import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 from torch.autograd import Variable
 
