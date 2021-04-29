@@ -35,7 +35,7 @@ This tutorial is designed to demonstrate a typical machine learning development 
 - Added rudimentary tensorboard logging.
 - Changed to save the predictions as JSON and save annotated images as PNGs.
 
-> This code is for pedagogical purposes only.  It is not meant as an example of a high performing or efficient model.  It's only purpose is to show the various ways the trainML capabilities can be utilized in the model development process.  Do NOT use this in production.
+> This code is for illustrative purposes only.  It is not meant as an example of a high performing or efficient model.  It's only purpose is to show the various ways the trainML capabilities can be utilized in the model development process.  Do NOT use this in production.
 
 ### Prerequisites
 
@@ -79,12 +79,27 @@ Continue to explore the notebook design and job environment as desired.  In most
 
 ### Parallel Hyperparamter Search
 
+python data_processing.py &&
+
+```
+python train.py --optimizer adam
+python train.py --optimizer adamw
+python train.py --optimizer adamax
+python train.py --optimizer sgd
+python train.py --optimizer adagrad --lr 0.1
+```
 
 ### Marathon Training
 
+```
+python data_processing.py && python train.py --epochs 10 --train-threshold
+```
 
 ## Inference Pipeline
 
+```
+python data_processing.py --type prediction --images $TRAINML_DATA_PATH && python predict.py
+```
 
 ## Additional Information
 
