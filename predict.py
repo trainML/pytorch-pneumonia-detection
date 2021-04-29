@@ -28,7 +28,7 @@ def make_parser():
         "--data",
         "-d",
         type=str,
-        default=f"{os.environ.get('TRAINML_DATA_PATH')}/stage_2_train_images",
+        default=f"{os.environ.get('TRAINML_DATA_PATH')}",
         help="path to image files",
     )
     parser.add_argument(

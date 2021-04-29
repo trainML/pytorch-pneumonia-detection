@@ -221,8 +221,8 @@ def train_model(
         if i > num_steps:
             break
         # Convert torch tensor to Variable
-        input_batch = Variable(input_batch).cuda()
-        labels_batch = Variable(labels_batch).cuda()
+        input_batch = Variable(input_batch).cuda(non_blocking=True)
+        labels_batch = Variable(labels_batch).cuda(non_blocking=True)
 
         # compute output
         optimizer.zero_grad()
@@ -308,8 +308,8 @@ def evaluate_model(
         if i > num_steps:
             break
         # Convert torch tensor to Variable
-        input_batch = Variable(input_batch).cuda()
-        labels_batch = Variable(labels_batch).cuda()
+        input_batch = Variable(input_batch).cuda(non_blocking=True)
+        labels_batch = Variable(labels_batch).cuda(non_blocking=True)
 
         # compute model output
         output_batch = model(input_batch)
