@@ -76,6 +76,11 @@ Continue to explore the notebook design and job environment as desired.  In most
 
 ### Adapting the Notebook for Training
 
+Notebooks are great for exploratory data analysis and stepping through code once block at a time.  However, to run large scale experiments or productionalize a model, it should be converted into callable python scripts.  During this process, a key consideration is which variables should be exposes as "inputs" to the script during training and inference.  Typically, these variables fall into at least 3 categories; environment settings, features switches, and hyper parameters.  Environment settings allow the script to adapt to different execution environments (e.g. your laptop versus Kaggle versus trainML).  Common environment settings are the file path for the input, how many GPUs are available, and where to save the model checkpoints or outputs.  Features switches control if certain logic is executed or not.  Common feature switches include enabling tensorboard logging, placing the script in debug mode, or running a particular data processing step.  Hyper parameters are whichever model parameters you wish to expose for training experimentation.  Typical hyper parameters are learning rate, number of epochs, etc. but can also be setup to change the model's optimizer,  pre-trained backbone, number of layers, etc.
+
+Once you have selected the interesting variables to set at runtime, you must also implement a method for reading those variables during execution.  There are numerous methods to accomplish this, including reading from a yaml or json file, setting environment variables, parsing command line arguments, or using another library.  This tutorial is designed using the python built-in [argparse library](https://docs.python.org/3/howto/argparse.html) to specify variable as command line parameters to the training and prediction scripts.
+
+
 
 ### Parallel Hyperparamter Search
 
@@ -92,7 +97,7 @@ python train.py --optimizer adagrad --lr 0.1
 ### Marathon Training
 
 ```
-python data_processing.py && python train.py --epochs 10 --train-threshold
+python data_processing.py && python train.py --epochs 10 --train-threshold --no-save-images
 ```
 
 ## Inference Pipeline

@@ -188,8 +188,6 @@ def run_inference(args):
     )
     model = PneumoniaUNET().cuda()
     checkpoint = torch.load(args.model)
-    print("state", checkpoint["state_dict"])
-    print("best_threshold", checkpoint.get("best_threshold"))
     model.load_state_dict(checkpoint["state_dict"])
     best_threshold = checkpoint.get("best_threshold") or 0.2
     predictions = predict(model, loader)
@@ -213,10 +211,8 @@ def run_inference(args):
         annotations[pId] = get_prediction_string_for_prediction(
             prediction, best_threshold, args.rescale_factor
         )
-        if i % 100 == 0:
-            print(annotations[pId])
 
-    with open(f"{args.output}/annotations.json", "wb") as f:
+    with open(f"{args.output}/annotations.json", "w") as f:
         f.write(json.dumps(annotations))
 
 
