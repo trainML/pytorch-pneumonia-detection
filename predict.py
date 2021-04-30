@@ -142,7 +142,7 @@ def predict(model, dataloader):
     for i, (pred_batch, pIds) in enumerate(dataloader):
         print("Predicting batch {} / {}.".format(i + 1, len(dataloader)))
         # Convert torch tensor to Variable
-        pred_batch = Variable(pred_batch).cuda()
+        pred_batch = Variable(pred_batch).cuda(non_blocking=True)
 
         # compute output
         output_batch = model(pred_batch)
@@ -184,7 +184,10 @@ def run_inference(args):
         warping=False,
     )
     loader = DataLoader(
-        dataset=dataset, batch_size=args.batch_size, shuffle=False
+        dataset=dataset,
+        batch_size=args.batch_size,
+        shuffle=False,
+        pin_memory=True,
     )
     model = PneumoniaUNET().cuda()
     checkpoint = torch.load(args.model)

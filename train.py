@@ -699,11 +699,17 @@ def train(args):
 
     # define the dataloaders with the previous dataset
     loader_train = DataLoader(
-        dataset=dataset_train, batch_size=args.batch_size, shuffle=True
+        dataset=dataset_train,
+        batch_size=args.batch_size,
+        shuffle=True,
+        pin_memory=True,
     )
 
     loader_valid = DataLoader(
-        dataset=dataset_valid, batch_size=args.batch_size, shuffle=True
+        dataset=dataset_valid,
+        batch_size=args.batch_size,
+        shuffle=True,
+        pin_memory=True,
     )
 
     # Check if train images have been properly loaded
