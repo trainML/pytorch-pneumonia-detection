@@ -2,6 +2,7 @@ torch>=1.8.1
 torchvision
 matplotlib
 pydicom
+pycairo==1.16
 numpy
 Pillow
 scikit-learn

@@ -3,12 +3,10 @@ import numpy as np
 import os
 import torchvision as tv
 import PIL
-import torch
 from torch.utils.data.dataset import Dataset as torchDataset
 from scipy.ndimage.interpolation import map_coordinates
 from scipy.ndimage.filters import gaussian_filter
 from skimage.transform import resize
-from skimage.exposure import rescale_intensity
 import warnings
 
 
@@ -141,6 +139,7 @@ def load_and_prepare_image(
     # add trailing channel dimension
     img = np.expand_dims(img, -1)
     # apply rotation augmentation
+    angle = None
     if rotation_angle > 0:
         angle = rotation_angle * (
             2 * np.random.random_sample() - 1
@@ -153,6 +152,7 @@ def load_and_prepare_image(
     # apply transforms to image
     if transform is not None:
         img = transform(img)
+    return (img, image_shape, angle)
 
 
 # define the data generator class
@@ -204,7 +204,7 @@ class PneumoniaDataset(torchDataset):
         # get the corresponding pId
         pId = self.pIds[index]
         # load dicom file as numpy array
-        img = load_and_prepare_image(
+        img, image_shape, angle = load_and_prepare_image(
             f"{self.data_path}{pId}.dcm",
             rescale_factor=self.rescale_factor,
             warping=self.warping,
@@ -212,61 +212,6 @@ class PneumoniaDataset(torchDataset):
             rotation_angle=self.rotation_angle,
             transform=self.transform,
         )
-        img = pydicom.dcmread(
-            os.path.join(self.data_path, pId + ".dcm")
-        ).pixel_array
-        # summary = dict(
-        #     row_range=np.ptp(np.ptp(img, axis=0)),
-        #     column_range=np.ptp(np.ptp(img, axis=1)),
-        #     mean=np.mean(img),
-        #     shape=img.shape,
-        # )
-        # print("original image", summary)
-        # check if image is square
-        if img.shape[0] != img.shape[1]:
-            raise RuntimeError(
-                "Image shape {} should be square.".format(img.shape)
-            )
-        original_image_shape = img.shape[0]
-        # calculate network image shape
-        image_shape = original_image_shape / self.rescale_factor
-        # check if image_shape is an integer
-        if image_shape != int(image_shape):
-            raise RuntimeError(
-                f"Network image shape should be an integer. Was {image_shape}"
-            )
-        image_shape = int(image_shape)
-        # resize image
-        # IMPORTANT: skimage resize function rescales the output from 0 to 1, and pytorch doesn't like this!
-        # One solution would be using torchvision rescale function (but need to differentiate img and target transforms)
-        # Here I use skimage resize and then rescale the output again from 0 to 255
-        img = resize(img, (image_shape, image_shape), mode="reflect")
-        # recale image from 0 to 255
-        img = imgMinMaxScaler(img, (0, 255))
-        # image warping augmentation
-        if self.warping:
-            img = elastic_transform(
-                img,
-                image_shape * 2.0,
-                image_shape * 0.1,
-                random_state=self.random_state,
-            )
-        # add trailing channel dimension
-        img = np.expand_dims(img, -1)
-        # apply rotation augmentation
-        if self.rotation_angle > 0:
-            angle = self.rotation_angle * (
-                2 * np.random.random_sample() - 1
-            )  # generate random angle
-            img = tv.transforms.functional.to_pil_image(img)
-            img = tv.transforms.functional.rotate(
-                img, angle, resample=PIL.Image.BILINEAR
-            )
-
-        # apply transforms to image
-        if self.transform is not None:
-            img = self.transform(img)
-
         # summary = dict(
         #     row_range=np.ptp(np.ptp(img.numpy(), axis=0)),
         #     column_range=np.ptp(np.ptp(img.numpy(), axis=1)),

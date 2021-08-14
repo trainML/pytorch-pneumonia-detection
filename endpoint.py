@@ -43,20 +43,23 @@ def predict(img):
 
 
 def predict_file(input_file, output_file):
-    img = load_and_prepare_image(input_file, rescale_factor=rescale_factor)
-    prediction = predict(img)
+    img, _, _ = load_and_prepare_image(
+        input_file, rescale_factor=rescale_factor, transform=transform
+    )
+    input = img.unsqueeze(0)
+    prediction = predict(input)
     predicted_boxes, confidences = parse_boxes(
-        prediction, threshold=best_threshold, connectivity=None
+        prediction[0], threshold=best_threshold, connectivity=None
     )
     save_image_prediction(
         output_file,
         img,
-        prediction,
+        prediction[0],
         predicted_boxes,
         confidences,
     )
     annotations = get_prediction_string_for_prediction(
-        prediction, best_threshold, rescale_factor
+        prediction[0], best_threshold, rescale_factor
     )
     return annotations
 
