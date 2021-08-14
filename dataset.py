@@ -90,6 +90,71 @@ def elastic_transform(image, alpha, sigma, random_state=None):
     return image_warped
 
 
+def load_and_prepare_image(
+    filename,
+    rescale_factor=1,
+    warping=False,
+    seed=42,
+    rotation_angle=0,
+    transform=None,
+):
+    random_state = np.random.RandomState(seed=seed)
+
+    # load dicom file as numpy array
+    img = pydicom.dcmread(os.path.join(filename)).pixel_array
+    # summary = dict(
+    #     row_range=np.ptp(np.ptp(img, axis=0)),
+    #     column_range=np.ptp(np.ptp(img, axis=1)),
+    #     mean=np.mean(img),
+    #     shape=img.shape,
+    # )
+    # print("original image", summary)
+    # check if image is square
+    if img.shape[0] != img.shape[1]:
+        raise RuntimeError(
+            "Image shape {} should be square.".format(img.shape)
+        )
+    original_image_shape = img.shape[0]
+    # calculate network image shape
+    image_shape = original_image_shape / rescale_factor
+    # check if image_shape is an integer
+    if image_shape != int(image_shape):
+        raise RuntimeError(
+            f"Network image shape should be an integer. Was {image_shape}"
+        )
+    image_shape = int(image_shape)
+    # resize image
+    # IMPORTANT: skimage resize function rescales the output from 0 to 1, and pytorch doesn't like this!
+    # One solution would be using torchvision rescale function (but need to differentiate img and target transforms)
+    # Here I use skimage resize and then rescale the output again from 0 to 255
+    img = resize(img, (image_shape, image_shape), mode="reflect")
+    # recale image from 0 to 255
+    img = imgMinMaxScaler(img, (0, 255))
+    # image warping augmentation
+    if warping:
+        img = elastic_transform(
+            img,
+            image_shape * 2.0,
+            image_shape * 0.1,
+            random_state=random_state,
+        )
+    # add trailing channel dimension
+    img = np.expand_dims(img, -1)
+    # apply rotation augmentation
+    if rotation_angle > 0:
+        angle = rotation_angle * (
+            2 * np.random.random_sample() - 1
+        )  # generate random angle
+        img = tv.transforms.functional.to_pil_image(img)
+        img = tv.transforms.functional.rotate(
+            img, angle, resample=PIL.Image.BILINEAR
+        )
+
+    # apply transforms to image
+    if transform is not None:
+        img = transform(img)
+
+
 # define the data generator class
 class PneumoniaDataset(torchDataset):
     """
@@ -130,7 +195,8 @@ class PneumoniaDataset(torchDataset):
         self.transform = transform
         self.rotation_angle = rotation_angle
         self.warping = warping
-        self.random_state = np.random.RandomState(seed=seed)
+        self.seed = seed
+        self.random_state = np.random.RandomState(seed=self.seed)
 
         self.data_path = f"{self.root}/"
 
@@ -138,6 +204,14 @@ class PneumoniaDataset(torchDataset):
         # get the corresponding pId
         pId = self.pIds[index]
         # load dicom file as numpy array
+        img = load_and_prepare_image(
+            f"{self.data_path}{pId}.dcm",
+            rescale_factor=self.rescale_factor,
+            warping=self.warping,
+            seed=self.seed,
+            rotation_angle=self.rotation_angle,
+            transform=self.transform,
+        )
         img = pydicom.dcmread(
             os.path.join(self.data_path, pId + ".dcm")
         ).pixel_array
