@@ -66,15 +66,18 @@ def predict_file(input_file, output_file):
 
 def get_prediction(pId, dicom):
     fd, input_file = tempfile.mkstemp()
-    _, output_file = tempfile.mkstemp()
+    fd2, output_file = tempfile.mkstemp()
+    os.close(fd2)
     with open(fd, "wb") as f:
         f.write(base64.b64decode(dicom))
 
     annotations = predict_file(input_file, output_file)
+    print(output_file)
     with open(output_file, "rb") as f:
-        image = base64.b64encode(f.read())
+        image = base64.b64encode(f.read()).decode("utf-8")
 
+    print(image)
     os.remove(input_file)
-    os.remove(output_file)
+    # os.remove(output_file)
 
     return {pId: dict(annotations=annotations, image=image)}
