@@ -39,7 +39,7 @@ function App() {
       <Header />
       <br />
       <Container>
-        <Grid container xs={12} spacing={2}>
+        <Grid container spacing={2}>
           <Grid item xs={6}>
             <Input
               onChange={setInput}

@@ -4,7 +4,6 @@ import Grid from '@material-ui/core/Grid';
 
 import Paper from '@material-ui/core/Paper';
 import Typography from '@material-ui/core/Typography';
-import grey from '@material-ui/core/colors/grey';
 
 const useStyles = makeStyles((theme) => ({
   paper: {
