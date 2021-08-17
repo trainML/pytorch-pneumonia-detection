@@ -184,7 +184,9 @@ If you have [jq](https://stedolan.github.io/jq/) installed, the annotated image 
 
 > A current version of [Node.js](https://nodejs.org/en/) must be installed for this section to work.
 
-Go to the `front-end` folder of the repository in a terminal window and type `npm start`. This will open a web browser to http://localhost:3000 and load the example front end. Click the `Upload File` button and select one of the DICOM from the dataset. Click `Get Prediction` to send the file to the endpoint. When the response comes back, the annotated image will display with the box coordinates (if any). Click `Upload New File` and `Get Prediction` on additional images as desired.
+Open the file `front-end/src/config.js` with a text editor. Change the `api_address` value to your endpoint URL and save the file. If you used a different the route path when creating the endpoint, you must also update that here.
+
+Go to the `front-end` folder of the repository in a terminal window and type `npm start`. This will open a web browser to http://localhost:3000 and load the example front end. Click the `Upload File` button and select one of the DICOM from the dataset. Click `Get Prediction` to send the file to the endpoint. When the response comes back, the annotated image will display with the box coordinates (if any). Click `Upload New File` and `Get Prediction` on additional DICOM files as desired.
 
 Once you are done with the endpoint, be sure to return to the Endpoint Dashboard to stop it. Endpoints, like Notebooks, will stay running until you stop them.
 
