@@ -160,7 +160,7 @@ To create a new inference job, navigate to the [Inference Job Dashboard](https:/
 python data_processing.py --type prediction --images $TRAINML_DATA_PATH && python predict.py
 ```
 
-Click `Next` to review the job and `Create` to start inference. Since this job is using the local data option for input data as well as output data, you must connect to the job before it will start. The job will wait indefinitely for you to connect. In contrast to a job waiting to upload, jobs waiting to download do not incur compute charges while waiting. Once you connect and the download completes, the job will take approximately 30 minutes to finish on an `RTX 2080 Ti` GPU.
+Click `Next` to review the job and `Create` to start inference. Since this job is using the local data option for input data as well as output data, you must connect to the job before it will start. The job will wait indefinitely for you to connect, and you continue to be charged while it is waiting. Once you connect and the download completes, the job will take approximately 30 minutes to finish on an `RTX 2080 Ti` GPU.
 
 Once it is finished, open the directory you specified as the output storage path and unzip the file. It will contain an `images` folder with the annotated images based on the new dataset as well as an `annotations.json` file that contains the predicted boxes for each images in text form.
 
