@@ -146,7 +146,7 @@ def load_and_prepare_image(
         )  # generate random angle
         img = tv.transforms.functional.to_pil_image(img)
         img = tv.transforms.functional.rotate(
-            img, angle, resample=PIL.Image.BILINEAR
+            img, angle, interpolation=tv.transforms.InterpolationMode.BILINEAR
         )
 
     # apply transforms to image
@@ -253,7 +253,9 @@ class PneumoniaDataset(torchDataset):
             if self.rotation_angle > 0:
                 target = tv.transforms.functional.to_pil_image(target)
                 target = tv.transforms.functional.rotate(
-                    target, angle, resample=PIL.Image.BILINEAR
+                    target,
+                    angle,
+                    interpolation=tv.transforms.InterpolationMode.BILINEAR,
                 )
             # apply transforms to target
             if self.transform is not None:
