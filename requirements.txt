@@ -1,7 +1,7 @@
 torch>=1.8.1
 torchvision
 matplotlib
-pydicom
+pydicom==2.4.4
 pycairo==1.16
 numpy
 Pillow
